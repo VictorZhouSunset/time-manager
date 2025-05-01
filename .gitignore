@@ -1,0 +1,17 @@
+# Node modules (非常重要，通常包含大量文件)
+node_modules/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Log files or temporary files
+*.log
+temp/
+
+# Environment variables (如果将来使用)
+# .env
+
+# Editor specific files (根据你的团队和习惯决定是否添加)
+# .vscode/
+# .idea/
