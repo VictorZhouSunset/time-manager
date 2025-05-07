@@ -1,0 +1,33 @@
+# 此文件指定哪些文件和文件夹不应通过 'clasp push' 上传到 Google Apps Script 项目
+
+# Node modules (如果使用)
+node_modules/
+
+# 操作系统生成的文件
+.DS_Store
+Thumbs.db
+
+# 日志文件或临时文件
+*.log
+temp/
+
+# 环境变量文件 (如果使用)
+.env*
+
+# 编辑器配置文件
+.vscode/
+.idea/
+
+# 项目文档和 Git 相关文件 (这些不需要上传到 Apps Script)
+*.md
+.gitignore
+.claspignore
+
+# 其他非 Apps Script 代码文件或目录（将来可选
+# 例如:
+# images/
+# docs/
+# test/
+
+# 忽略所有隐藏文件和目录
+.*

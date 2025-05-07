@@ -9,9 +9,12 @@ Thumbs.db
 *.log
 temp/
 
-# Environment variables (如果将来使用)
-# .env
+# Clasp files
+.clasp.json
 
-# Editor specific files (根据你的团队和习惯决定是否添加)
-# .vscode/
-# .idea/
+# Environment variables (if later used)
+.env
+
+# Editor specific files
+.vscode/
+.idea/
