@@ -3,29 +3,27 @@ function runAllAddTaskTests() {
     Logger.log("======== RUNNING ADDTASK TESTS ========");
     let allTestsPassed = true;
 
-
     // --- Individual Test Cases ---
-    const DUMMY_VALID_PROJECT_ID = 'P-dummy-for-task-tests'; // For tests that DO provide a parentId
+    if (!testAddTask_Success_Basic_WithParent()) allTestsPassed = false;
+    if (!testAddTask_Success_Basic_NoParent()) allTestsPassed = false;
+    if (!testAddTask_Success_AllFields_WithParent()) allTestsPassed = false;
+    if (!testAddTask_Success_SpecificStatusAndTime_WithParent()) allTestsPassed = false;
 
-    if (!testAddTask_Success_Basic_WithParent(DUMMY_VALID_PROJECT_ID)) allTestsPassed = false;
-    if (!testAddTask_Success_Basic_NoParent()) allTestsPassed = false; // New test for optional parentId
-    if (!testAddTask_Success_AllFields_WithParent(DUMMY_VALID_PROJECT_ID)) allTestsPassed = false;
-    if (!testAddTask_Success_SpecificStatusAndTime_WithParent(DUMMY_VALID_PROJECT_ID)) allTestsPassed = false;
+    if (!testAddTask_Failure_MissingName()) allTestsPassed = false;
+    if (!testAddTask_Failure_MissingName_NoParent()) allTestsPassed = false;
+    if (!testAddTask_Failure_MissingExpectTime()) allTestsPassed = false;
+    if (!testAddTask_Failure_NegativeExpectTime()) allTestsPassed = false;
+    if (!testAddTask_Failure_InvalidParentIdType()) allTestsPassed = false;
+    if (!testAddTask_Failure_EmptyParentIdString()) allTestsPassed = false;
+    if (!testAddTask_Failure_NonexistentParentId()) allTestsPassed = false;
 
-    if (!testAddTask_Failure_MissingName(DUMMY_VALID_PROJECT_ID)) allTestsPassed = false; // Still needs parentId for this specific failure test
-    if (!testAddTask_Failure_MissingName_NoParent()) allTestsPassed = false; // Test missing name without parent
-    if (!testAddTask_Failure_MissingExpectTime(DUMMY_VALID_PROJECT_ID)) allTestsPassed = false; // Still needs parentId
-    if (!testAddTask_Failure_NegativeExpectTime(DUMMY_VALID_PROJECT_ID)) allTestsPassed = false; // Still needs parentId
-    // parentId is optional, so these failure tests for *missing* parentId are removed or changed
-    if (!testAddTask_Failure_InvalidParentIdType()) allTestsPassed = false; // If parentId IS provided, it must be a string
-    if (!testAddTask_Failure_EmptyParentIdString()) allTestsPassed = false; // If parentId IS provided, it must not be an empty string
+    if (!testAddTask_Warning_InvalidDescriptionType()) allTestsPassed = false;
+    if (!testAddTask_Warning_InvalidStatus()) allTestsPassed = false;
+    if (!testAddTask_Warning_InvalidTotalTimeType()) allTestsPassed = false;
+    if (!testAddTask_Warning_NegativeTotalTime()) allTestsPassed = false;
 
-
-    if (!testAddTask_Warning_InvalidDescriptionType(DUMMY_VALID_PROJECT_ID)) allTestsPassed = false;
-    if (!testAddTask_Warning_InvalidStatus(DUMMY_VALID_PROJECT_ID)) allTestsPassed = false;
-    if (!testAddTask_Warning_InvalidTotalTimeType(DUMMY_VALID_PROJECT_ID)) allTestsPassed = false;
-    if (!testAddTask_Warning_NegativeTotalTime(DUMMY_VALID_PROJECT_ID)) allTestsPassed = false;
-
+    if (!testAddTask_Success_ZeroTimes()) allTestsPassed = false;
+    if (!testAddTask_Success_TaskWithTaskParent()) allTestsPassed = false;
 
     Logger.log("======== ADDTASK TESTS COMPLETE ========");
     if (allTestsPassed) {
@@ -70,12 +68,23 @@ function runAllGetTaskTests() {
 // ---------------------------------------------------------------------------------------
 
 
-function testAddTask_Success_Basic_WithParent(parentId) {
+function testAddTask_Success_Basic_WithParent() {
     Logger.log("\n--- Test: AddTask - Success Basic with ParentId ---");
+    // Create a parent project for this test
+    const parentProject = addProject({ 
+        name: "Test Parent Project for Basic Task", 
+        expectTimeSpent: 10 
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
+        return false;
+    }
+
     const input = {
         name: "Basic Task with Parent",
         expectTimeSpent: 5,
-        parentId: parentId
+        parentId: parentProject.projectId
     };
     const result = addTask(input);
     let pass = true;
@@ -116,12 +125,23 @@ function testAddTask_Success_Basic_NoParent() {
 }
 
 
-function testAddTask_Success_AllFields_WithParent(parentId) {
+function testAddTask_Success_AllFields_WithParent() {
     Logger.log("\n--- Test: AddTask - Success All Fields with ParentId ---");
+    // Create a parent project for this test
+    const parentProject = addProject({ 
+        name: "Test Parent Project for Complete Task", 
+        expectTimeSpent: 10 
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
+        return false;
+    }
+
     const input = {
         name: "Complete Task with Parent",
         description: "This task has all fields",
-        parentId: parentId,
+        parentId: parentProject.projectId,
         status: "On track",
         expectTimeSpent: 15,
         totalTimeSpent: 2.5
@@ -143,12 +163,23 @@ function testAddTask_Success_AllFields_WithParent(parentId) {
     return pass;
 }
 
-function testAddTask_Success_SpecificStatusAndTime_WithParent(parentId) {
+function testAddTask_Success_SpecificStatusAndTime_WithParent() {
     Logger.log("\n--- Test: AddTask - Success Specific Status & Time with ParentId ---");
+    // Create a parent project for this test
+    const parentProject = addProject({ 
+        name: "Test Parent Project for Status Task", 
+        expectTimeSpent: 10 
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
+        return false;
+    }
+
     const input = {
         name: "Task On Hold with Parent",
         expectTimeSpent: 8,
-        parentId: parentId,
+        parentId: parentProject.projectId,
         status: "Paused", // Using 'Paused' from your updated status list
         totalTimeSpent: 1
     };
@@ -163,9 +194,20 @@ function testAddTask_Success_SpecificStatusAndTime_WithParent(parentId) {
     return pass;
 }
 
-function testAddTask_Failure_MissingName(parentId) { // This test still needs a parentId to isolate the name failure
+function testAddTask_Failure_MissingName() {
     Logger.log("\n--- Test: AddTask - Failure Missing Name (with ParentId provided) ---");
-    const input = { expectTimeSpent: 10, parentId: parentId };
+    // Create a parent project for this test
+    const parentProject = addProject({ 
+        name: "Test Parent Project for Missing Name", 
+        expectTimeSpent: 10 
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
+        return false;
+    }
+
+    const input = { expectTimeSpent: 10, parentId: parentProject.projectId };
     const result = addTask(input);
     return assertNull(result, "Function should return null when name is missing");
 }
@@ -178,16 +220,38 @@ function testAddTask_Failure_MissingName_NoParent() {
 }
 
 
-function testAddTask_Failure_MissingExpectTime(parentId) { // Needs parentId to isolate expectTimeSpent failure
+function testAddTask_Failure_MissingExpectTime() {
     Logger.log("\n--- Test: AddTask - Failure Missing expectTimeSpent (with ParentId provided) ---");
-    const input = { name: "Task No Time", parentId: parentId };
+    // Create a parent project for this test
+    const parentProject = addProject({ 
+        name: "Test Parent Project for Missing Time", 
+        expectTimeSpent: 10 
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
+        return false;
+    }
+
+    const input = { name: "Task No Time", parentId: parentProject.projectId };
     const result = addTask(input);
     return assertNull(result, "Function should return null when expectTimeSpent is missing");
 }
 
-function testAddTask_Failure_NegativeExpectTime(parentId) { // Needs parentId to isolate expectTimeSpent failure
+function testAddTask_Failure_NegativeExpectTime() {
     Logger.log("\n--- Test: AddTask - Failure Negative expectTimeSpent (with ParentId provided) ---");
-    const input = { name: "Bad Time Task", expectTimeSpent: -2, parentId: parentId };
+    // Create a parent project for this test
+    const parentProject = addProject({ 
+        name: "Test Parent Project for Negative Time", 
+        expectTimeSpent: 10 
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
+        return false;
+    }
+
+    const input = { name: "Bad Time Task", expectTimeSpent: -2, parentId: parentProject.projectId };
     const result = addTask(input);
     return assertNull(result, "Function should return null for negative expectTimeSpent");
 }
@@ -208,10 +272,33 @@ function testAddTask_Failure_EmptyParentIdString() {
     return assertNull(result, "Function should return null for empty string parentId if provided");
 }
 
+function testAddTask_Failure_NonexistentParentId() {
+    Logger.log("\n--- Test: AddTask - Failure Nonexistent ParentId ---");
+    const input = { 
+        name: "Nonexistent Parent Task", 
+        expectTimeSpent: 5, 
+        parentId: "P-DOES-NOT-EXIST-" + Utilities.getUuid() 
+    };
+    const result = addTask(input);
+    // This test expects addTask to fail if parentId doesn't exist in the database
+    return assertNull(result, "Function should return null for nonexistent parentId");
+}
 
-function testAddTask_Warning_InvalidDescriptionType(parentId) {
+
+function testAddTask_Warning_InvalidDescriptionType() {
     Logger.log("\n--- Test: AddTask - Warning Invalid Description Type (should default, with ParentId) ---");
-    const input = { name: "Desc Type Task", expectTimeSpent: 5, parentId: parentId, description: 123 };
+    // Create a parent project for this test
+    const parentProject = addProject({ 
+        name: "Test Parent Project for Invalid Desc", 
+        expectTimeSpent: 10 
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
+        return false;
+    }
+
+    const input = { name: "Desc Type Task", expectTimeSpent: 5, parentId: parentProject.projectId, description: 123 };
     const result = addTask(input);
     let pass = true;
     pass = assertTruthy(result, "Function should still create task") && pass;
@@ -221,9 +308,20 @@ function testAddTask_Warning_InvalidDescriptionType(parentId) {
     return pass;
 }
 
-function testAddTask_Warning_InvalidStatus(parentId) {
+function testAddTask_Warning_InvalidStatus() {
     Logger.log("\n--- Test: AddTask - Warning Invalid Status (should default, with ParentId) ---");
-    const input = { name: "Status Test Task", expectTimeSpent: 5, parentId: parentId, status: "Way Too Cool" };
+    // Create a parent project for this test
+    const parentProject = addProject({ 
+        name: "Test Parent Project for Invalid Status", 
+        expectTimeSpent: 10 
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
+        return false;
+    }
+
+    const input = { name: "Status Test Task", expectTimeSpent: 5, parentId: parentProject.projectId, status: "Way Too Cool" };
     const result = addTask(input);
     let pass = true;
     pass = assertTruthy(result, "Function should still create task") && pass;
@@ -233,9 +331,20 @@ function testAddTask_Warning_InvalidStatus(parentId) {
     return pass;
 }
 
-function testAddTask_Warning_InvalidTotalTimeType(parentId) {
+function testAddTask_Warning_InvalidTotalTimeType() {
     Logger.log("\n--- Test: AddTask - Warning Invalid totalTimeSpent Type (should default, with ParentId) ---");
-    const input = { name: "Total Time Type Task", expectTimeSpent: 5, parentId: parentId, totalTimeSpent: "one hour" };
+    // Create a parent project for this test
+    const parentProject = addProject({ 
+        name: "Test Parent Project for Invalid Time Type", 
+        expectTimeSpent: 10 
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
+        return false;
+    }
+
+    const input = { name: "Total Time Type Task", expectTimeSpent: 5, parentId: parentProject.projectId, totalTimeSpent: "one hour" };
     const result = addTask(input);
     let pass = true;
     pass = assertTruthy(result, "Function should still create task") && pass;
@@ -245,14 +354,58 @@ function testAddTask_Warning_InvalidTotalTimeType(parentId) {
     return pass;
 }
 
-function testAddTask_Warning_NegativeTotalTime(parentId) {
+function testAddTask_Warning_NegativeTotalTime() {
     Logger.log("\n--- Test: AddTask - Warning Negative totalTimeSpent (should default, with ParentId) ---");
-    const input = { name: "Negative Total Time Task", expectTimeSpent: 5, parentId: parentId, totalTimeSpent: -3 };
+    // Create a parent project for this test
+    const parentProject = addProject({ 
+        name: "Test Parent Project for Negative Total Time", 
+        expectTimeSpent: 10 
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
+        return false;
+    }
+
+    const input = { name: "Negative Total Time Task", expectTimeSpent: 5, parentId: parentProject.projectId, totalTimeSpent: -3 };
     const result = addTask(input);
     let pass = true;
     pass = assertTruthy(result, "Function should still create task") && pass;
     if (result) {
         pass = assertStrictEquals(result.totalTimeSpent, 0, "totalTimeSpent should default to 0 for negative input") && pass;
+    }
+    return pass;
+}
+
+function testAddTask_Success_ZeroTimes() {
+    Logger.log("\n--- Test: AddTask - Success Zero Times ---");
+    const input = { name: "Zero Time Task", expectTimeSpent: 0, totalTimeSpent: 0 };
+    const result = addTask(input);
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.expectTimeSpent, 0, "expectTimeSpent should be 0") && pass;
+        pass = assertStrictEquals(result.totalTimeSpent, 0, "totalTimeSpent should be 0") && pass;
+    }
+    return pass;
+}
+
+function testAddTask_Success_TaskWithTaskParent() {
+    Logger.log("\n--- Test: AddTask - Success Task with Task Parent ---");
+    
+    // First create a parent task
+    const parentTask = addTask({ name: "Parent Task", expectTimeSpent: 10 });
+    
+    // Then create a child task referencing the parent task
+    const input = { name: "Child of Task", expectTimeSpent: 5, parentId: parentTask.taskId };
+    const result = addTask(input);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.parentId, input.parentId, "ParentId should match input") && pass;
+        // Verify it's a task ID (starts with T-)
+        pass = assertTruthy(result.parentId.startsWith('T-'), "Parent ID should be a task ID") && pass;
     }
     return pass;
 }

@@ -29,6 +29,15 @@ function addProject(projectData) {
             Logger.log('Error: Invalid parentId provided. If provided, it must be a non-empty string.');
             return null;
         }
+        
+        // Check if the parentId exists in the database (could be either a project or a task)
+        const parentProject = getProjectById(projectData.parentId);
+        const parentTask = getTaskById(projectData.parentId);
+        
+        if (!parentProject && !parentTask) {
+            Logger.log(`Error: Parent with ID '${projectData.parentId}' does not exist in either projects or tasks.`);
+            return null;
+        }
     }
   
     try {

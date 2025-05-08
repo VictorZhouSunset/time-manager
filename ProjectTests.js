@@ -18,6 +18,8 @@ function runAllAddProjectTests() {
     if (!testAddProject_Warning_InvalidTotalTimeType()) allTestsPassed = false;   // Expects default
     if (!testAddProject_Warning_NegativeTotalTime()) allTestsPassed = false;      // Expects default (or error depending on strictness)
     if (!testAddProject_Failure_InvalidParentIdType()) allTestsPassed = false;
+    if (!testAddProject_Failure_EmptyParentIdString()) allTestsPassed = false;
+    if (!testAddProject_Failure_NonexistentParentId()) allTestsPassed = false;
 
     Logger.log("======== ADDPROJECT TESTS COMPLETE ========");
     if (allTestsPassed) {
@@ -82,10 +84,14 @@ function testAddProject_Success_Basic() {
 
 function testAddProject_Success_AllFields() {
     Logger.log("\n--- Test: AddProject - Success All Fields ---");
+    
+    // First create a parent project
+    const parentProject = addProject({ name: "Parent for Complete Project", expectTimeSpent: 10 });
+    
     const input = {
         name: "Complete Project",
         description: "This has all fields",
-        parentId: "P-DUMMY-PARENT-123", // Assume this ID is valid for testing (no existence check yet)
+        parentId: parentProject.projectId, // Use a real parent ID
         status: "On track",
         expectTimeSpent: 25,
         totalTimeSpent: 5.5
@@ -109,8 +115,14 @@ function testAddProject_Success_AllFields() {
 
 function testAddProject_Success_WithParentId() {
     Logger.log("\n--- Test: AddProject - Success With ParentId ---");
-    const input = { name: "Child Project", expectTimeSpent: 5, parentId: "P-ANOTHER-DUMMY" };
+    
+    // First create a parent project
+    const parentProject = addProject({ name: "Parent Project", expectTimeSpent: 10 });
+    
+    // Then create a child project referencing the parent
+    const input = { name: "Child Project", expectTimeSpent: 5, parentId: parentProject.projectId };
     const result = addProject(input);
+    
     let pass = true;
     pass = assertTruthy(result, "Function should return an object") && pass;
     if (result) {
@@ -233,6 +245,14 @@ function testAddProject_Failure_EmptyParentIdString() {
     const result = addProject(input);
     // This test expects addProject to fail if parentId IS PROVIDED and is an empty string
     return assertNull(result, "Function should return null for empty string parentId if provided");
+}
+
+function testAddProject_Failure_NonexistentParentId() {
+    Logger.log("\n--- Test: AddProject - Failure Nonexistent ParentId ---");
+    const input = { name: "Nonexistent Parent Project", expectTimeSpent: 5, parentId: "P-DOES-NOT-EXIST-" + Utilities.getUuid() };
+    const result = addProject(input);
+    // This test expects addProject to fail if parentId doesn't exist in the database
+    return assertNull(result, "Function should return null for nonexistent parentId");
 }
 
 // ---------------------------------------------------------------------------------------
