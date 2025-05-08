@@ -190,11 +190,121 @@ function getEventsByParentId(parentId) {
 }
 
 
+// ------------------------------------------------------------------------------------------------
+// Update functions
+// ------------------------------------------------------------------------------------------------
 
+/**
+ * Updates an existing calendar event in the CalendarEvents worksheet.
+ * @param {string} eventId The ID of the event to update
+ * @param {object} updateData The data to update. Can include:
+ * {
+ *   name?: string,           // Optional: New event name
+ *   description?: string,    // Optional: New event description
+ *   eventStart?: Date,       // Optional: New start time
+ *   eventEnd?: Date,         // Optional: New end time
+ *   parentId?: string        // Optional: New parent project/task ID
+ * }
+ * @return {object | null} The updated calendar event object, or null if failed
+ */
+function updateCalendarEvent(eventId, updateData) {
+    // Input validation
+    if (!eventId || typeof eventId !== 'string' || eventId.trim() === '') {
+        Logger.log('Error: Invalid eventId provided. It must be a non-empty string.');
+        return null;
+    }
 
+    if (!updateData || typeof updateData !== 'object') {
+        Logger.log('Error: Invalid updateData provided. It must be an object.');
+        return null;
+    }
 
+    // Validate eventStart and eventEnd if provided
+    if (updateData.hasOwnProperty('eventStart') && !(updateData.eventStart instanceof Date)) {
+        Logger.log('Error: Invalid eventStart provided. It must be a Date object.');
+        return null;
+    }
 
+    if (updateData.hasOwnProperty('eventEnd') && !(updateData.eventEnd instanceof Date)) {
+        Logger.log('Error: Invalid eventEnd provided. It must be a Date object.');
+        return null;
+    }
 
+    // Validate that eventStart is not after eventEnd if both are provided
+    if (updateData.hasOwnProperty('eventStart') && updateData.hasOwnProperty('eventEnd') &&
+        updateData.eventStart > updateData.eventEnd) {
+        Logger.log('Error: eventStart cannot be later than eventEnd.');
+        return null;
+    }
+
+    // Validate parentId if provided
+    if (updateData.hasOwnProperty('parentId') && updateData.parentId !== null && updateData.parentId !== undefined) {
+        if (typeof updateData.parentId !== 'string' || updateData.parentId.trim() === '') {
+            Logger.log('Error: Invalid parentId provided. If provided, it must be a non-empty string.');
+            return null;
+        }
+
+        // Check if the parentId exists in the database
+        const parentProject = getProjectById(updateData.parentId);
+        const parentTask = getTaskById(updateData.parentId);
+        
+        if (!parentProject && !parentTask) {
+            Logger.log(`Error: Parent with ID '${updateData.parentId}' does not exist in either projects or tasks.`);
+            return null;
+        }
+    }
+
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(EVENTS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${EVENTS_SHEET_NAME}" not found!`);
+        }
+
+        const data = sheet.getDataRange().getValues();
+        const eventRowIndex = data.slice(1).findIndex(row => row[0] === eventId);
+        
+        if (eventRowIndex === -1) {
+            Logger.log(`Error: Event with ID '${eventId}' not found.`);
+            return null;
+        }
+
+        // Get the current event data
+        const currentEvent = rowToEvent(data[eventRowIndex + 1]);
+
+        // Update only the provided fields
+        const updatedEvent = {
+            ...currentEvent,
+            name: updateData.hasOwnProperty('name') ? updateData.name : currentEvent.name,
+            description: updateData.hasOwnProperty('description') ? updateData.description : currentEvent.description,
+            eventStart: updateData.hasOwnProperty('eventStart') ? updateData.eventStart : currentEvent.eventStart,
+            eventEnd: updateData.hasOwnProperty('eventEnd') ? updateData.eventEnd : currentEvent.eventEnd,
+            parentId: updateData.hasOwnProperty('parentId') ? updateData.parentId : currentEvent.parentId
+        };
+
+        // Prepare the updated row data
+        const updatedRow = [
+            updatedEvent.eventId,
+            updatedEvent.parentId,
+            updatedEvent.name,
+            updatedEvent.description,
+            updatedEvent.eventStart,
+            updatedEvent.eventEnd,
+            updatedEvent.createdAt
+        ];
+
+        // Update the row in the sheet
+        sheet.getRange(eventRowIndex + 2, 1, 1, updatedRow.length).setValues([updatedRow]);
+
+        Logger.log(`Calendar event updated: ID = ${eventId}`);
+        return updatedEvent;
+
+    } catch (error) {
+        Logger.log(`Failed to update calendar event: ${error}`);
+        return null;
+    }
+}
 
 
 

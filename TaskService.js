@@ -235,10 +235,153 @@ function getTasksByStatus(status) {
 }
 
 
+// ------------------------------------------------------------------------------------------------
+// Update functions
+// ------------------------------------------------------------------------------------------------
 
+/**
+ * Updates an existing task in the Tasks worksheet.
+ * @param {string} taskId The ID of the task to update
+ * @param {object} updateData The data to update. Can include:
+ * {
+ *   name?: string,           // Optional: New task name
+ *   description?: string,    // Optional: New task description
+ *   status?: string,         // Optional: New task status
+ *   expectTimeSpent?: number,// Optional: New expected time spent
+ *   totalTimeSpent?: number, // Optional: New total time spent
+ *   parentId?: string        // Optional: New parent project/task ID
+ * }
+ * @return {object | null} The updated task object, or null if failed
+ */
+function updateTask(taskId, updateData) {
+    // Input validation
+    if (!taskId || typeof taskId !== 'string' || taskId.trim() === '') {
+        Logger.log('Error: Invalid taskId provided. It must be a non-empty string.');
+        return null;
+    }
 
+    if (!updateData || typeof updateData !== 'object') {
+        Logger.log('Error: Invalid updateData provided. It must be an object.');
+        return null;
+    }
 
+    // Validate name if provided
+    if (updateData.hasOwnProperty('name') && (typeof updateData.name !== 'string' || updateData.name.trim() === '')) {
+        Logger.log('Error: Invalid name provided. It must be a non-empty string.');
+        return null;
+    }
 
+    // Validate status if provided
+    if (updateData.hasOwnProperty('status') && !VALID_TASK_STATUSES.has(updateData.status)) {
+        Logger.log(`Error: Invalid status provided. Must be one of: ${Array.from(VALID_TASK_STATUSES).join(', ')}`);
+        return null;
+    }
+
+    // Validate expectTimeSpent if provided
+    if (updateData.hasOwnProperty('expectTimeSpent') && 
+        (typeof updateData.expectTimeSpent !== 'number' || updateData.expectTimeSpent < 0)) {
+        Logger.log('Error: Invalid expectTimeSpent provided. It must be a non-negative number.');
+        return null;
+    }
+
+    // Validate totalTimeSpent if provided
+    if (updateData.hasOwnProperty('totalTimeSpent') && 
+        (typeof updateData.totalTimeSpent !== 'number' || updateData.totalTimeSpent < 0)) {
+        Logger.log('Error: Invalid totalTimeSpent provided. It must be a non-negative number.');
+        return null;
+    }
+
+    // Validate parentId if provided
+    if (updateData.hasOwnProperty('parentId') && updateData.parentId !== null && updateData.parentId !== undefined) {
+        if (typeof updateData.parentId !== 'string' || updateData.parentId.trim() === '') {
+            Logger.log('Error: Invalid parentId provided. If provided, it must be a non-empty string.');
+            return null;
+        }
+
+        // Prevent setting a task as its own parent
+        if (updateData.parentId === taskId) {
+            Logger.log('Error: A task cannot be its own parent.');
+            return null;
+        }
+
+        // Check if the parentId exists in the database
+        const parentProject = getProjectById(updateData.parentId);
+        const parentTask = getTaskById(updateData.parentId);
+        
+        if (!parentProject && !parentTask) {
+            Logger.log(`Error: Parent with ID '${updateData.parentId}' does not exist in either projects or tasks.`);
+            return null;
+        }
+
+        // Check for circular references
+        const parent = parentProject || parentTask;
+        if (parent) {
+            let currentParent = parent;
+            while (currentParent.parentId) {
+                if (currentParent.parentId === taskId) {
+                    Logger.log('Error: Circular reference detected. Cannot set this parent as it would create a cycle.');
+                    return null;
+                }
+                // Get next parent - could be either a project or task
+                currentParent = getProjectById(currentParent.parentId) || getTaskById(currentParent.parentId);
+                if (!currentParent) break;
+            }
+        }
+    }
+
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(TASKS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${TASKS_SHEET_NAME}" not found!`);
+        }
+
+        const data = sheet.getDataRange().getValues();
+        const taskRowIndex = data.slice(1).findIndex(row => row[0] === taskId);
+        
+        if (taskRowIndex === -1) {
+            Logger.log(`Error: Task with ID '${taskId}' not found.`);
+            return null;
+        }
+
+        // Get the current task data
+        const currentTask = rowToTask(data[taskRowIndex + 1]);
+
+        // Update only the provided fields
+        const updatedTask = {
+            ...currentTask,
+            name: updateData.hasOwnProperty('name') ? updateData.name : currentTask.name,
+            description: updateData.hasOwnProperty('description') ? updateData.description : currentTask.description,
+            status: updateData.hasOwnProperty('status') ? updateData.status : currentTask.status,
+            expectTimeSpent: updateData.hasOwnProperty('expectTimeSpent') ? updateData.expectTimeSpent : currentTask.expectTimeSpent,
+            totalTimeSpent: updateData.hasOwnProperty('totalTimeSpent') ? updateData.totalTimeSpent : currentTask.totalTimeSpent,
+            parentId: updateData.hasOwnProperty('parentId') ? updateData.parentId : currentTask.parentId
+        };
+
+        // Prepare the updated row data
+        const updatedRow = [
+            updatedTask.taskId,
+            updatedTask.parentId,
+            updatedTask.name,
+            updatedTask.description,
+            updatedTask.status,
+            updatedTask.expectTimeSpent,
+            updatedTask.totalTimeSpent,
+            updatedTask.createdAt
+        ];
+
+        // Update the row in the sheet
+        sheet.getRange(taskRowIndex + 2, 1, 1, updatedRow.length).setValues([updatedRow]);
+
+        Logger.log(`Task updated: ID = ${taskId}`);
+        return updatedTask;
+
+    } catch (error) {
+        Logger.log(`Failed to update task: ${error}`);
+        return null;
+    }
+}
 
 // ------------------------------------------------------------------------------------------------
 // Helper functions

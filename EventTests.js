@@ -50,8 +50,35 @@ function runAllGetCalendarEventTests() {
     return allTestsPassed;
 }
 
+function runAllUpdateCalendarEventTests() {
+    Logger.log("======== RUNNING UPDATECALENDAREVENT TESTS ========");
+    let allTestsPassed = true;
+
+    // --- Individual Test Cases ---
+    if (!testUpdateCalendarEvent_Success_Basic()) allTestsPassed = false;
+    if (!testUpdateCalendarEvent_Success_AllFields()) allTestsPassed = false;
+    if (!testUpdateCalendarEvent_Success_PartialUpdate()) allTestsPassed = false;
+    if (!testUpdateCalendarEvent_Success_UpdateParentId()) allTestsPassed = false;
+    if (!testUpdateCalendarEvent_Success_EndEqualStart()) allTestsPassed = false;
+
+    if (!testUpdateCalendarEvent_Failure_InvalidEventId()) allTestsPassed = false;
+    if (!testUpdateCalendarEvent_Failure_NotFound()) allTestsPassed = false;
+    if (!testUpdateCalendarEvent_Failure_InvalidUpdateData()) allTestsPassed = false;
+    if (!testUpdateCalendarEvent_Failure_EndBeforeStart()) allTestsPassed = false;
+    if (!testUpdateCalendarEvent_Failure_InvalidParentId()) allTestsPassed = false;
+    if (!testUpdateCalendarEvent_Failure_NonexistentParentId()) allTestsPassed = false;
+
+    Logger.log("======== UPDATECALENDAREVENT TESTS COMPLETE ========");
+    if (allTestsPassed) {
+        Logger.log("🎉🎉🎉 ALL UPDATECALENDAREVENT TESTS PASSED! 🎉🎉🎉");
+    } else {
+        Logger.log("❌❌❌ SOME UPDATECALENDAREVENT TESTS FAILED. Check logs above. ❌❌❌");
+    }
+    return allTestsPassed;
+}
+
 // ---------------------------------------------------------------------------------------
-// --- Test Cases for addCalendarEvent ---
+// --- Test Cases for addCalendarEvent functions ---
 // ---------------------------------------------------------------------------------------
 
 function testAddCalendarEvent_Success_Basic() {
@@ -278,7 +305,7 @@ function testAddCalendarEvent_Warning_InvalidDescriptionType() {
 
 
 // ---------------------------------------------------------------------------------------
-// --- Test Cases for getEvent functions ---
+// --- Test Cases for getCalendarEvent functions ---
 // ---------------------------------------------------------------------------------------
 
 function testGetAllCalendarEvents_Success_Basic() {
@@ -450,6 +477,342 @@ function testGetCalendarEventsByParentId_Success_NoChildren() {
 }
 
 
+// ---------------------------------------------------------------------------------------
+// --- Test Cases for updateCalendarEvent functions ---
+// ---------------------------------------------------------------------------------------
 
+function testUpdateCalendarEvent_Success_Basic() {
+    Logger.log("\n--- Test: UpdateCalendarEvent - Success Basic ---");
+    
+    // Create a test event
+    const startTime = new Date();
+    const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
+    const testEvent = addCalendarEvent({
+        name: "Test Event for Update",
+        eventStart: startTime,
+        eventEnd: endTime
+    });
+    
+    if (!testEvent) {
+        Logger.log("❌ Failed to create test event");
+        return false;
+    }
+    
+    // Update the event
+    const updateData = {
+        name: "Updated Event Name"
+    };
+    const result = updateCalendarEvent(testEvent.eventId, updateData);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.eventId, testEvent.eventId, "Event ID should remain unchanged") && pass;
+        pass = assertStrictEquals(result.name, updateData.name, "Name should be updated") && pass;
+        pass = assertStrictEquals(result.eventStart.getTime(), testEvent.eventStart.getTime(), "Start time should remain unchanged") && pass;
+        pass = assertStrictEquals(result.eventEnd.getTime(), testEvent.eventEnd.getTime(), "End time should remain unchanged") && pass;
+    }
+    return pass;
+}
+
+function testUpdateCalendarEvent_Success_AllFields() {
+    Logger.log("\n--- Test: UpdateCalendarEvent - Success All Fields ---");
+    
+    // Create a parent project for this test
+    const parentProject = addProject({
+        name: "Parent for Event Update",
+        expectTimeSpent: 10
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ Failed to create parent project");
+        return false;
+    }
+    
+    // Create a test event
+    const startTime = new Date();
+    const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
+    const testEvent = addCalendarEvent({
+        name: "Test Event for Full Update",
+        eventStart: startTime,
+        eventEnd: endTime
+    });
+    
+    if (!testEvent) {
+        Logger.log("❌ Failed to create test event");
+        return false;
+    }
+    
+    // Update all fields
+    const newStartTime = new Date(startTime.getTime() + (1 * 60 * 60 * 1000));
+    const newEndTime = new Date(newStartTime.getTime() + (3 * 60 * 60 * 1000));
+    const updateData = {
+        name: "Fully Updated Event",
+        description: "Updated description",
+        eventStart: newStartTime,
+        eventEnd: newEndTime,
+        parentId: parentProject.projectId
+    };
+    
+    const result = updateCalendarEvent(testEvent.eventId, updateData);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.eventId, testEvent.eventId, "Event ID should remain unchanged") && pass;
+        pass = assertStrictEquals(result.name, updateData.name, "Name should be updated") && pass;
+        pass = assertStrictEquals(result.description, updateData.description, "Description should be updated") && pass;
+        pass = assertStrictEquals(result.eventStart.getTime(), updateData.eventStart.getTime(), "Start time should be updated") && pass;
+        pass = assertStrictEquals(result.eventEnd.getTime(), updateData.eventEnd.getTime(), "End time should be updated") && pass;
+        pass = assertStrictEquals(result.parentId, updateData.parentId, "Parent ID should be updated") && pass;
+    }
+    return pass;
+}
+
+function testUpdateCalendarEvent_Success_PartialUpdate() {
+    Logger.log("\n--- Test: UpdateCalendarEvent - Success Partial Update ---");
+    
+    // Create a test event with all fields
+    const startTime = new Date();
+    const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
+    const testEvent = addCalendarEvent({
+        name: "Test Event for Partial Update",
+        description: "Original description",
+        eventStart: startTime,
+        eventEnd: endTime
+    });
+    
+    if (!testEvent) {
+        Logger.log("❌ Failed to create test event");
+        return false;
+    }
+    
+    // Update only description
+    const updateData = {
+        description: "Updated description only"
+    };
+    
+    const result = updateCalendarEvent(testEvent.eventId, updateData);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.eventId, testEvent.eventId, "Event ID should remain unchanged") && pass;
+        pass = assertStrictEquals(result.name, testEvent.name, "Name should remain unchanged") && pass;
+        pass = assertStrictEquals(result.description, updateData.description, "Description should be updated") && pass;
+        pass = assertStrictEquals(result.eventStart.getTime(), testEvent.eventStart.getTime(), "Start time should remain unchanged") && pass;
+        pass = assertStrictEquals(result.eventEnd.getTime(), testEvent.eventEnd.getTime(), "End time should remain unchanged") && pass;
+    }
+    return pass;
+}
+
+function testUpdateCalendarEvent_Success_UpdateParentId() {
+    Logger.log("\n--- Test: UpdateCalendarEvent - Success Update ParentId ---");
+    
+    // Create two parent projects
+    const parent1 = addProject({
+        name: "Parent 1 for Event",
+        expectTimeSpent: 10
+    });
+    const parent2 = addProject({
+        name: "Parent 2 for Event",
+        expectTimeSpent: 15
+    });
+    
+    if (!parent1 || !parent2) {
+        Logger.log("❌ Failed to create parent projects");
+        return false;
+    }
+    
+    // Create a test event with first parent
+    const startTime = new Date();
+    const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
+    const testEvent = addCalendarEvent({
+        name: "Test Event for Parent Update",
+        eventStart: startTime,
+        eventEnd: endTime,
+        parentId: parent1.projectId
+    });
+    
+    if (!testEvent) {
+        Logger.log("❌ Failed to create test event");
+        return false;
+    }
+    
+    // Update parent ID
+    const updateData = {
+        parentId: parent2.projectId
+    };
+    
+    const result = updateCalendarEvent(testEvent.eventId, updateData);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.eventId, testEvent.eventId, "Event ID should remain unchanged") && pass;
+        pass = assertStrictEquals(result.parentId, parent2.projectId, "Parent ID should be updated") && pass;
+    }
+    return pass;
+}
+
+function testUpdateCalendarEvent_Success_EndEqualStart() {
+    Logger.log("\n--- Test: UpdateCalendarEvent - Success End Equal Start ---");
+    
+    // Create a test event
+    const startTime = new Date();
+    const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
+    const testEvent = addCalendarEvent({
+        name: "Test Event for Equal Times",
+        eventStart: startTime,
+        eventEnd: endTime
+    });
+    
+    if (!testEvent) {
+        Logger.log("❌ Failed to create test event");
+        return false;
+    }
+    
+    // Update to equal times
+    const newTime = new Date();
+    const updateData = {
+        eventStart: newTime,
+        eventEnd: newTime
+    };
+    
+    const result = updateCalendarEvent(testEvent.eventId, updateData);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.eventStart.getTime(), newTime.getTime(), "Start time should be updated") && pass;
+        pass = assertStrictEquals(result.eventEnd.getTime(), newTime.getTime(), "End time should be updated") && pass;
+    }
+    return pass;
+}
+
+function testUpdateCalendarEvent_Failure_InvalidEventId() {
+    Logger.log("\n--- Test: UpdateCalendarEvent - Failure Invalid EventId ---");
+    
+    const updateData = { name: "New Name" };
+    const result = updateCalendarEvent(null, updateData);
+    
+    return assertNull(result, "Function should return null for invalid event ID");
+}
+
+function testUpdateCalendarEvent_Failure_NotFound() {
+    Logger.log("\n--- Test: UpdateCalendarEvent - Failure Not Found ---");
+    
+    const nonExistentId = "CE-DOES-NOT-EXIST-" + Utilities.getUuid();
+    const updateData = { name: "New Name" };
+    const result = updateCalendarEvent(nonExistentId, updateData);
+    
+    return assertNull(result, "Function should return null for non-existent event ID");
+}
+
+function testUpdateCalendarEvent_Failure_InvalidUpdateData() {
+    Logger.log("\n--- Test: UpdateCalendarEvent - Failure Invalid UpdateData ---");
+    
+    // Create a test event
+    const startTime = new Date();
+    const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
+    const testEvent = addCalendarEvent({
+        name: "Test Event for Invalid Update",
+        eventStart: startTime,
+        eventEnd: endTime
+    });
+    
+    if (!testEvent) {
+        Logger.log("❌ Failed to create test event");
+        return false;
+    }
+    
+    const result = updateCalendarEvent(testEvent.eventId, null);
+    
+    return assertNull(result, "Function should return null for invalid update data");
+}
+
+function testUpdateCalendarEvent_Failure_EndBeforeStart() {
+    Logger.log("\n--- Test: UpdateCalendarEvent - Failure End Before Start ---");
+    
+    // Create a test event
+    const startTime = new Date();
+    const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
+    const testEvent = addCalendarEvent({
+        name: "Test Event for Invalid Times",
+        eventStart: startTime,
+        eventEnd: endTime
+    });
+    
+    if (!testEvent) {
+        Logger.log("❌ Failed to create test event");
+        return false;
+    }
+    
+    // Try to update with end time before start time
+    const newStartTime = new Date();
+    const newEndTime = new Date(newStartTime.getTime() - (1 * 60 * 60 * 1000));
+    const updateData = {
+        eventStart: newStartTime,
+        eventEnd: newEndTime
+    };
+    
+    const result = updateCalendarEvent(testEvent.eventId, updateData);
+    
+    return assertNull(result, "Function should return null when end time is before start time");
+}
+
+function testUpdateCalendarEvent_Failure_InvalidParentId() {
+    Logger.log("\n--- Test: UpdateCalendarEvent - Failure Invalid ParentId ---");
+    
+    // Create a test event
+    const startTime = new Date();
+    const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
+    const testEvent = addCalendarEvent({
+        name: "Test Event for Invalid Parent",
+        eventStart: startTime,
+        eventEnd: endTime
+    });
+    
+    if (!testEvent) {
+        Logger.log("❌ Failed to create test event");
+        return false;
+    }
+    
+    // Try to update with invalid parent ID
+    const updateData = {
+        parentId: 12345 // Invalid type
+    };
+    
+    const result = updateCalendarEvent(testEvent.eventId, updateData);
+    
+    return assertNull(result, "Function should return null for invalid parent ID type");
+}
+
+function testUpdateCalendarEvent_Failure_NonexistentParentId() {
+    Logger.log("\n--- Test: UpdateCalendarEvent - Failure Nonexistent ParentId ---");
+    
+    // Create a test event
+    const startTime = new Date();
+    const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
+    const testEvent = addCalendarEvent({
+        name: "Test Event for Nonexistent Parent",
+        eventStart: startTime,
+        eventEnd: endTime
+    });
+    
+    if (!testEvent) {
+        Logger.log("❌ Failed to create test event");
+        return false;
+    }
+    
+    // Try to update with non-existent parent ID
+    const updateData = {
+        parentId: "P-DOES-NOT-EXIST-" + Utilities.getUuid()
+    };
+    
+    const result = updateCalendarEvent(testEvent.eventId, updateData);
+    
+    return assertNull(result, "Function should return null for non-existent parent ID");
+}
 
 

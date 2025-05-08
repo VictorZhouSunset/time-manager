@@ -233,12 +233,153 @@ function getProjectsByStatus(status) {
 
 
 
+// ------------------------------------------------------------------------------------------------
+// Update functions
+// ------------------------------------------------------------------------------------------------
 
+/**
+ * Updates an existing project in the Projects worksheet.
+ * @param {string} projectId The ID of the project to update
+ * @param {object} updateData The data to update. Can include:
+ * {
+ *   name?: string,           // Optional: New project name
+ *   description?: string,    // Optional: New project description
+ *   status?: string,         // Optional: New project status
+ *   expectTimeSpent?: number,// Optional: New expected time spent
+ *   totalTimeSpent?: number, // Optional: New total time spent
+ *   parentId?: string        // Optional: New parent project/task ID
+ * }
+ * @return {object | null} The updated project object, or null if failed
+ */
+function updateProject(projectId, updateData) {
+    // Input validation
+    if (!projectId || typeof projectId !== 'string' || projectId.trim() === '') {
+        Logger.log('Error: Invalid projectId provided. It must be a non-empty string.');
+        return null;
+    }
 
+    if (!updateData || typeof updateData !== 'object') {
+        Logger.log('Error: Invalid updateData provided. It must be an object.');
+        return null;
+    }
 
+    // Validate name if provided
+    if (updateData.hasOwnProperty('name') && (typeof updateData.name !== 'string' || updateData.name.trim() === '')) {
+        Logger.log('Error: Invalid name provided. It must be a non-empty string.');
+        return null;
+    }
 
+    // Validate status if provided
+    if (updateData.hasOwnProperty('status') && !VALID_PROJECT_STATUSES.has(updateData.status)) {
+        Logger.log(`Error: Invalid status provided. Must be one of: ${Array.from(VALID_PROJECT_STATUSES).join(', ')}`);
+        return null;
+    }
 
+    // Validate expectTimeSpent if provided
+    if (updateData.hasOwnProperty('expectTimeSpent') && 
+        (typeof updateData.expectTimeSpent !== 'number' || updateData.expectTimeSpent < 0)) {
+        Logger.log('Error: Invalid expectTimeSpent provided. It must be a non-negative number.');
+        return null;
+    }
 
+    // Validate totalTimeSpent if provided
+    if (updateData.hasOwnProperty('totalTimeSpent') && 
+        (typeof updateData.totalTimeSpent !== 'number' || updateData.totalTimeSpent < 0)) {
+        Logger.log('Error: Invalid totalTimeSpent provided. It must be a non-negative number.');
+        return null;
+    }
+
+    // Validate parentId if provided
+    if (updateData.hasOwnProperty('parentId') && updateData.parentId !== null && updateData.parentId !== undefined) {
+        if (typeof updateData.parentId !== 'string' || updateData.parentId.trim() === '') {
+            Logger.log('Error: Invalid parentId provided. If provided, it must be a non-empty string.');
+            return null;
+        }
+
+        // Prevent setting a project as its own parent
+        if (updateData.parentId === projectId) {
+            Logger.log('Error: A project cannot be its own parent.');
+            return null;
+        }
+
+        // Check if the parentId exists in the database
+        const parentProject = getProjectById(updateData.parentId);
+        const parentTask = getTaskById(updateData.parentId);
+        
+        if (!parentProject && !parentTask) {
+            Logger.log(`Error: Parent with ID '${updateData.parentId}' does not exist in either projects or tasks.`);
+            return null;
+        }
+
+        // Check for circular references
+        const parent = parentProject || parentTask;
+        if (parent) {
+            let currentParent = parent;
+            while (currentParent.parentId) {
+                if (currentParent.parentId === projectId) {
+                    Logger.log('Error: Circular reference detected. Cannot set this parent as it would create a cycle.');
+                    return null;
+                }
+                // Get next parent - could be either a project or task
+                currentParent = getProjectById(currentParent.parentId) || getTaskById(currentParent.parentId);
+                if (!currentParent) break;
+            }
+        }
+    }
+
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(PROJECTS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${PROJECTS_SHEET_NAME}" not found!`);
+        }
+
+        const data = sheet.getDataRange().getValues();
+        const projectRowIndex = data.slice(1).findIndex(row => row[0] === projectId);
+        
+        if (projectRowIndex === -1) {
+            Logger.log(`Error: Project with ID '${projectId}' not found.`);
+            return null;
+        }
+
+        // Get the current project data
+        const currentProject = rowToProject(data[projectRowIndex + 1]);
+
+        // Update only the provided fields
+        const updatedProject = {
+            ...currentProject,
+            name: updateData.hasOwnProperty('name') ? updateData.name : currentProject.name,
+            description: updateData.hasOwnProperty('description') ? updateData.description : currentProject.description,
+            status: updateData.hasOwnProperty('status') ? updateData.status : currentProject.status,
+            expectTimeSpent: updateData.hasOwnProperty('expectTimeSpent') ? updateData.expectTimeSpent : currentProject.expectTimeSpent,
+            totalTimeSpent: updateData.hasOwnProperty('totalTimeSpent') ? updateData.totalTimeSpent : currentProject.totalTimeSpent,
+            parentId: updateData.hasOwnProperty('parentId') ? updateData.parentId : currentProject.parentId
+        };
+
+        // Prepare the updated row data
+        const updatedRow = [
+            updatedProject.projectId,
+            updatedProject.parentId,
+            updatedProject.name,
+            updatedProject.description,
+            updatedProject.status,
+            updatedProject.expectTimeSpent,
+            updatedProject.totalTimeSpent,
+            updatedProject.createdAt
+        ];
+
+        // Update the row in the sheet
+        sheet.getRange(projectRowIndex + 2, 1, 1, updatedRow.length).setValues([updatedRow]);
+
+        Logger.log(`Project updated: ID = ${projectId}`);
+        return updatedProject;
+
+    } catch (error) {
+        Logger.log(`Failed to update project: ${error}`);
+        return null;
+    }
+}
 
 // ------------------------------------------------------------------------------------------------
 // Helper functions

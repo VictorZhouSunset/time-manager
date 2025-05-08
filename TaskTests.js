@@ -61,10 +61,39 @@ function runAllGetTaskTests() {
     return allTestsPassed;
 }
 
+function runAllUpdateTaskTests() {
+    Logger.log("======== RUNNING UPDATETASK TESTS ========");
+    let allTestsPassed = true;
+
+    // --- Individual Test Cases ---
+    if (!testUpdateTask_Success_Basic()) allTestsPassed = false;
+    if (!testUpdateTask_Success_AllFields()) allTestsPassed = false;
+    if (!testUpdateTask_Success_PartialUpdate()) allTestsPassed = false;
+    if (!testUpdateTask_Success_UpdateParentId()) allTestsPassed = false;
+    if (!testUpdateTask_Success_ZeroTimes()) allTestsPassed = false;
+
+    if (!testUpdateTask_Failure_InvalidTaskId()) allTestsPassed = false;
+    if (!testUpdateTask_Failure_NotFound()) allTestsPassed = false;
+    if (!testUpdateTask_Failure_InvalidUpdateData()) allTestsPassed = false;
+    if (!testUpdateTask_Failure_NegativeExpectTime()) allTestsPassed = false;
+    if (!testUpdateTask_Failure_NegativeTotalTime()) allTestsPassed = false;
+    if (!testUpdateTask_Failure_InvalidParentId()) allTestsPassed = false;
+    if (!testUpdateTask_Failure_NonexistentParentId()) allTestsPassed = false;
+    if (!testUpdateTask_Failure_CircularReference()) allTestsPassed = false;
+    if (!testUpdateTask_Failure_CircularReference_WithProject()) allTestsPassed = false;
+
+    Logger.log("======== UPDATETASK TESTS COMPLETE ========");
+    if (allTestsPassed) {
+        Logger.log("🎉🎉🎉 ALL UPDATETASK TESTS PASSED! 🎉🎉🎉");
+    } else {
+        Logger.log("❌❌❌ SOME UPDATETASK TESTS FAILED. Check logs above. ❌❌❌");
+    }
+    return allTestsPassed;
+}
 
 
 // ---------------------------------------------------------------------------------------
-// --- Test Cases for addTask ---
+// --- Test Cases for addTask functions ---
 // ---------------------------------------------------------------------------------------
 
 
@@ -602,6 +631,440 @@ function testGetTasksByStatus_Failure_InvalidStatus() {
 }
 
 
+// ---------------------------------------------------------------------------------------
+// --- Test Cases for updateTask functions ---
+// ---------------------------------------------------------------------------------------
 
+function testUpdateTask_Success_Basic() {
+    Logger.log("\n--- Test: UpdateTask - Success Basic ---");
+    
+    // Create a test task
+    const testTask = addTask({
+        name: "Test Task for Update",
+        expectTimeSpent: 10
+    });
+    
+    if (!testTask) {
+        Logger.log("❌ Failed to create test task");
+        return false;
+    }
+    
+    // Update the task
+    const updateData = {
+        name: "Updated Task Name"
+    };
+    const result = updateTask(testTask.taskId, updateData);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.taskId, testTask.taskId, "Task ID should remain unchanged") && pass;
+        pass = assertStrictEquals(result.name, updateData.name, "Name should be updated") && pass;
+        pass = assertStrictEquals(result.expectTimeSpent, testTask.expectTimeSpent, "ExpectTimeSpent should remain unchanged") && pass;
+    }
+    return pass;
+}
 
+function testUpdateTask_Success_AllFields() {
+    Logger.log("\n--- Test: UpdateTask - Success All Fields ---");
+    
+    // Create a parent task for this test
+    const parentTask = addTask({
+        name: "Parent for Task Update",
+        expectTimeSpent: 20
+    });
+    
+    if (!parentTask) {
+        Logger.log("❌ Failed to create parent task");
+        return false;
+    }
+    
+    // Create a test task
+    const testTask = addTask({
+        name: "Test Task for Full Update",
+        expectTimeSpent: 10
+    });
+    
+    if (!testTask) {
+        Logger.log("❌ Failed to create test task");
+        return false;
+    }
+    
+    // Update all fields
+    const updateData = {
+        name: "Fully Updated Task",
+        description: "Updated description",
+        status: "On track",
+        expectTimeSpent: 15,
+        totalTimeSpent: 5,
+        parentId: parentTask.taskId
+    };
+    
+    const result = updateTask(testTask.taskId, updateData);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.taskId, testTask.taskId, "Task ID should remain unchanged") && pass;
+        pass = assertStrictEquals(result.name, updateData.name, "Name should be updated") && pass;
+        pass = assertStrictEquals(result.description, updateData.description, "Description should be updated") && pass;
+        pass = assertStrictEquals(result.status, updateData.status, "Status should be updated") && pass;
+        pass = assertStrictEquals(result.expectTimeSpent, updateData.expectTimeSpent, "ExpectTimeSpent should be updated") && pass;
+        pass = assertStrictEquals(result.totalTimeSpent, updateData.totalTimeSpent, "TotalTimeSpent should be updated") && pass;
+        pass = assertStrictEquals(result.parentId, updateData.parentId, "Parent ID should be updated") && pass;
+    }
+    return pass;
+}
+
+function testUpdateTask_Success_PartialUpdate() {
+    Logger.log("\n--- Test: UpdateTask - Success Partial Update ---");
+    
+    // Create a test task with all fields
+    const testTask = addTask({
+        name: "Test Task for Partial Update",
+        description: "Original description",
+        expectTimeSpent: 10,
+        status: "Not yet started"
+    });
+    
+    if (!testTask) {
+        Logger.log("❌ Failed to create test task");
+        return false;
+    }
+    
+    // Update only description and status
+    const updateData = {
+        description: "Updated description only",
+        status: "On track"
+    };
+    
+    const result = updateTask(testTask.taskId, updateData);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.taskId, testTask.taskId, "Task ID should remain unchanged") && pass;
+        pass = assertStrictEquals(result.name, testTask.name, "Name should remain unchanged") && pass;
+        pass = assertStrictEquals(result.description, updateData.description, "Description should be updated") && pass;
+        pass = assertStrictEquals(result.status, updateData.status, "Status should be updated") && pass;
+        pass = assertStrictEquals(result.expectTimeSpent, testTask.expectTimeSpent, "ExpectTimeSpent should remain unchanged") && pass;
+    }
+    return pass;
+}
+
+function testUpdateTask_Success_UpdateParentId() {
+    Logger.log("\n--- Test: UpdateTask - Success Update ParentId ---");
+    
+    // Create two parent tasks
+    const parent1 = addTask({
+        name: "Parent 1 for Task",
+        expectTimeSpent: 20
+    });
+    const parent2 = addTask({
+        name: "Parent 2 for Task",
+        expectTimeSpent: 25
+    });
+    
+    if (!parent1 || !parent2) {
+        Logger.log("❌ Failed to create parent tasks");
+        return false;
+    }
+    
+    // Create a test task with first parent
+    const testTask = addTask({
+        name: "Test Task for Parent Update",
+        expectTimeSpent: 10,
+        parentId: parent1.taskId
+    });
+    
+    if (!testTask) {
+        Logger.log("❌ Failed to create test task");
+        return false;
+    }
+    
+    // Update parent ID
+    const updateData = {
+        parentId: parent2.taskId
+    };
+    
+    const result = updateTask(testTask.taskId, updateData);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.taskId, testTask.taskId, "Task ID should remain unchanged") && pass;
+        pass = assertStrictEquals(result.parentId, parent2.taskId, "Parent ID should be updated") && pass;
+    }
+    return pass;
+}
+
+function testUpdateTask_Success_ZeroTimes() {
+    Logger.log("\n--- Test: UpdateTask - Success Zero Times ---");
+    
+    // Create a test task
+    const testTask = addTask({
+        name: "Test Task for Zero Times",
+        expectTimeSpent: 10,
+        totalTimeSpent: 5
+    });
+    
+    if (!testTask) {
+        Logger.log("❌ Failed to create test task");
+        return false;
+    }
+    
+    // Update to zero times
+    const updateData = {
+        expectTimeSpent: 0,
+        totalTimeSpent: 0
+    };
+    
+    const result = updateTask(testTask.taskId, updateData);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.expectTimeSpent, 0, "ExpectTimeSpent should be updated to 0") && pass;
+        pass = assertStrictEquals(result.totalTimeSpent, 0, "TotalTimeSpent should be updated to 0") && pass;
+    }
+    return pass;
+}
+
+function testUpdateTask_Failure_InvalidTaskId() {
+    Logger.log("\n--- Test: UpdateTask - Failure Invalid TaskId ---");
+    
+    const updateData = { name: "New Name" };
+    const result = updateTask(null, updateData);
+    
+    return assertNull(result, "Function should return null for invalid task ID");
+}
+
+function testUpdateTask_Failure_NotFound() {
+    Logger.log("\n--- Test: UpdateTask - Failure Not Found ---");
+    
+    const nonExistentId = "T-DOES-NOT-EXIST-" + Utilities.getUuid();
+    const updateData = { name: "New Name" };
+    const result = updateTask(nonExistentId, updateData);
+    
+    return assertNull(result, "Function should return null for non-existent task ID");
+}
+
+function testUpdateTask_Failure_InvalidUpdateData() {
+    Logger.log("\n--- Test: UpdateTask - Failure Invalid UpdateData ---");
+    
+    // Create a test task
+    const testTask = addTask({
+        name: "Test Task for Invalid Update",
+        expectTimeSpent: 10
+    });
+    
+    if (!testTask) {
+        Logger.log("❌ Failed to create test task");
+        return false;
+    }
+    
+    const result = updateTask(testTask.taskId, null);
+    
+    return assertNull(result, "Function should return null for invalid update data");
+}
+
+function testUpdateTask_Failure_NegativeExpectTime() {
+    Logger.log("\n--- Test: UpdateTask - Failure Negative ExpectTimeSpent ---");
+    
+    // Create a test task
+    const testTask = addTask({
+        name: "Test Task for Negative Time",
+        expectTimeSpent: 10
+    });
+    
+    if (!testTask) {
+        Logger.log("❌ Failed to create test task");
+        return false;
+    }
+    
+    const updateData = {
+        expectTimeSpent: -5
+    };
+    
+    const result = updateTask(testTask.taskId, updateData);
+    
+    return assertNull(result, "Function should return null for negative expectTimeSpent");
+}
+
+function testUpdateTask_Failure_NegativeTotalTime() {
+    Logger.log("\n--- Test: UpdateTask - Failure Negative TotalTimeSpent ---");
+    
+    // Create a test task
+    const testTask = addTask({
+        name: "Test Task for Negative Total Time",
+        expectTimeSpent: 10
+    });
+    
+    if (!testTask) {
+        Logger.log("❌ Failed to create test task");
+        return false;
+    }
+    
+    const updateData = {
+        totalTimeSpent: -3
+    };
+    
+    const result = updateTask(testTask.taskId, updateData);
+    
+    return assertNull(result, "Function should return null for negative totalTimeSpent");
+}
+
+function testUpdateTask_Failure_InvalidParentId() {
+    Logger.log("\n--- Test: UpdateTask - Failure Invalid ParentId ---");
+    
+    // Create a test task
+    const testTask = addTask({
+        name: "Test Task for Invalid Parent",
+        expectTimeSpent: 10
+    });
+    
+    if (!testTask) {
+        Logger.log("❌ Failed to create test task");
+        return false;
+    }
+    
+    const updateData = {
+        parentId: 12345 // Invalid type
+    };
+    
+    const result = updateTask(testTask.taskId, updateData);
+    
+    return assertNull(result, "Function should return null for invalid parent ID type");
+}
+
+function testUpdateTask_Failure_NonexistentParentId() {
+    Logger.log("\n--- Test: UpdateTask - Failure Nonexistent ParentId ---");
+    
+    // Create a test task
+    const testTask = addTask({
+        name: "Test Task for Nonexistent Parent",
+        expectTimeSpent: 10
+    });
+    
+    if (!testTask) {
+        Logger.log("❌ Failed to create test task");
+        return false;
+    }
+    
+    const updateData = {
+        parentId: "T-DOES-NOT-EXIST-" + Utilities.getUuid()
+    };
+    
+    const result = updateTask(testTask.taskId, updateData);
+    
+    return assertNull(result, "Function should return null for non-existent parent ID");
+}
+
+function testUpdateTask_Failure_CircularReference() {
+    Logger.log("\n--- Test: UpdateTask - Failure Circular Reference ---");
+    
+    // Create a parent task
+    const parentTask = addTask({
+        name: "Parent Task for Circular Test",
+        expectTimeSpent: 20
+    });
+    
+    if (!parentTask) {
+        Logger.log("❌ Failed to create parent task");
+        return false;
+    }
+    
+    // Create a child task
+    const childTask = addTask({
+        name: "Child Task for Circular Test",
+        expectTimeSpent: 10,
+        parentId: parentTask.taskId
+    });
+    
+    if (!childTask) {
+        Logger.log("❌ Failed to create child task");
+        return false;
+    }
+    
+    // Try to make parent task a child of its child (circular reference)
+    // Initial structure:    parentTask
+    //                         ↓
+    //                     childTask
+    //
+    // Attempted structure: parentTask
+    //                         ↓
+    //                     childTask
+    //                         ↓
+    //                     parentTask (circular!)
+    
+    const updateData = {
+        parentId: childTask.taskId
+    };
+    
+    const result = updateTask(parentTask.taskId, updateData);
+    
+    return assertNull(result, "Function should return null for circular reference");
+}
+
+function testUpdateTask_Failure_CircularReference_WithProject() {
+    Logger.log("\n--- Test: UpdateTask - Failure Circular Reference With Project ---");
+    
+    // Create a parent task
+    const parentTask = addTask({
+        name: "Parent Task for Project Circular Test",
+        expectTimeSpent: 20
+    });
+    
+    if (!parentTask) {
+        Logger.log("❌ Failed to create parent task");
+        return false;
+    }
+    
+    // Create a project under the task
+    const project = addProject({
+        name: "Project for Circular Test",
+        expectTimeSpent: 10,
+        parentId: parentTask.taskId
+    });
+    
+    if (!project) {
+        Logger.log("❌ Failed to create project");
+        return false;
+    }
+    
+    // Create a child task under the project
+    const childTask = addTask({
+        name: "Child Task for Project Circular Test",
+        expectTimeSpent: 5,
+        parentId: project.projectId
+    });
+    
+    if (!childTask) {
+        Logger.log("❌ Failed to create child task");
+        return false;
+    }
+    
+    // Try to make parent task a child of the child task (circular reference)
+    // Initial structure:    parentTask
+    //                         ↓
+    //                      project
+    //                         ↓
+    //                     childTask
+    //
+    // Attempted structure: parentTask
+    //                         ↓
+    //                      project
+    //                         ↓
+    //                     childTask
+    //                         ↓
+    //                     parentTask (circular!)
+    
+    const updateData = {
+        parentId: childTask.taskId
+    };
+    
+    const result = updateTask(parentTask.taskId, updateData);
+    
+    return assertNull(result, "Function should return null for circular reference through project");
+}
 

@@ -57,9 +57,38 @@ function runAllGetProjectTests() {
     return allTestsPassed;
 }
 
+function runAllUpdateProjectTests() {
+    Logger.log("======== RUNNING UPDATEPROJECT TESTS ========");
+    let allTestsPassed = true;
+
+    // --- Individual Test Cases ---
+    if (!testUpdateProject_Success_Basic()) allTestsPassed = false;
+    if (!testUpdateProject_Success_AllFields()) allTestsPassed = false;
+    if (!testUpdateProject_Success_PartialUpdate()) allTestsPassed = false;
+    if (!testUpdateProject_Success_UpdateParentId()) allTestsPassed = false;
+    if (!testUpdateProject_Success_ZeroTimes()) allTestsPassed = false;
+
+    if (!testUpdateProject_Failure_InvalidProjectId()) allTestsPassed = false;
+    if (!testUpdateProject_Failure_NotFound()) allTestsPassed = false;
+    if (!testUpdateProject_Failure_InvalidUpdateData()) allTestsPassed = false;
+    if (!testUpdateProject_Failure_NegativeExpectTime()) allTestsPassed = false;
+    if (!testUpdateProject_Failure_NegativeTotalTime()) allTestsPassed = false;
+    if (!testUpdateProject_Failure_InvalidParentId()) allTestsPassed = false;
+    if (!testUpdateProject_Failure_NonexistentParentId()) allTestsPassed = false;
+    if (!testUpdateProject_Failure_CircularReference()) allTestsPassed = false;
+    if (!testUpdateProject_Failure_CircularReference_WithTask()) allTestsPassed = false;
+
+    Logger.log("======== UPDATEPROJECT TESTS COMPLETE ========");
+    if (allTestsPassed) {
+        Logger.log("🎉🎉🎉 ALL UPDATEPROJECT TESTS PASSED! 🎉🎉🎉");
+    } else {
+        Logger.log("❌❌❌ SOME UPDATEPROJECT TESTS FAILED. Check logs above. ❌❌❌");
+    }
+    return allTestsPassed;
+}
 
 // ---------------------------------------------------------------------------------------
-// --- Test Cases for addProject ---
+// --- Test Cases for addProject functions ---
 // ---------------------------------------------------------------------------------------
 
 function testAddProject_Success_Basic() {
@@ -465,3 +494,441 @@ function testGetProjectsByStatus_Failure_InvalidStatus() {
     return pass;
 }
 
+
+
+// ---------------------------------------------------------------------------------------
+// --- Test Cases for updateProject functions ---
+// ---------------------------------------------------------------------------------------
+
+function testUpdateProject_Success_Basic() {
+    Logger.log("\n--- Test: UpdateProject - Success Basic ---");
+    
+    // Create a test project
+    const testProject = addProject({
+        name: "Test Project for Update",
+        expectTimeSpent: 10
+    });
+    
+    if (!testProject) {
+        Logger.log("❌ Failed to create test project");
+        return false;
+    }
+    
+    // Update the project
+    const updateData = {
+        name: "Updated Project Name"
+    };
+    const result = updateProject(testProject.projectId, updateData);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.projectId, testProject.projectId, "Project ID should remain unchanged") && pass;
+        pass = assertStrictEquals(result.name, updateData.name, "Name should be updated") && pass;
+        pass = assertStrictEquals(result.expectTimeSpent, testProject.expectTimeSpent, "ExpectTimeSpent should remain unchanged") && pass;
+    }
+    return pass;
+}
+
+function testUpdateProject_Success_AllFields() {
+    Logger.log("\n--- Test: UpdateProject - Success All Fields ---");
+    
+    // Create a parent project for this test
+    const parentProject = addProject({
+        name: "Parent for Project Update",
+        expectTimeSpent: 20
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ Failed to create parent project");
+        return false;
+    }
+    
+    // Create a test project
+    const testProject = addProject({
+        name: "Test Project for Full Update",
+        expectTimeSpent: 10
+    });
+    
+    if (!testProject) {
+        Logger.log("❌ Failed to create test project");
+        return false;
+    }
+    
+    // Update all fields
+    const updateData = {
+        name: "Fully Updated Project",
+        description: "Updated description",
+        status: "On track",
+        expectTimeSpent: 15,
+        totalTimeSpent: 5,
+        parentId: parentProject.projectId
+    };
+    
+    const result = updateProject(testProject.projectId, updateData);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.projectId, testProject.projectId, "Project ID should remain unchanged") && pass;
+        pass = assertStrictEquals(result.name, updateData.name, "Name should be updated") && pass;
+        pass = assertStrictEquals(result.description, updateData.description, "Description should be updated") && pass;
+        pass = assertStrictEquals(result.status, updateData.status, "Status should be updated") && pass;
+        pass = assertStrictEquals(result.expectTimeSpent, updateData.expectTimeSpent, "ExpectTimeSpent should be updated") && pass;
+        pass = assertStrictEquals(result.totalTimeSpent, updateData.totalTimeSpent, "TotalTimeSpent should be updated") && pass;
+        pass = assertStrictEquals(result.parentId, updateData.parentId, "Parent ID should be updated") && pass;
+    }
+    return pass;
+}
+
+function testUpdateProject_Success_PartialUpdate() {
+    Logger.log("\n--- Test: UpdateProject - Success Partial Update ---");
+    
+    // Create a test project with all fields
+    const testProject = addProject({
+        name: "Test Project for Partial Update",
+        description: "Original description",
+        expectTimeSpent: 10,
+        status: "Not yet started"
+    });
+    
+    if (!testProject) {
+        Logger.log("❌ Failed to create test project");
+        return false;
+    }
+    
+    // Update only description and status
+    const updateData = {
+        description: "Updated description only",
+        status: "On track"
+    };
+    
+    const result = updateProject(testProject.projectId, updateData);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.projectId, testProject.projectId, "Project ID should remain unchanged") && pass;
+        pass = assertStrictEquals(result.name, testProject.name, "Name should remain unchanged") && pass;
+        pass = assertStrictEquals(result.description, updateData.description, "Description should be updated") && pass;
+        pass = assertStrictEquals(result.status, updateData.status, "Status should be updated") && pass;
+        pass = assertStrictEquals(result.expectTimeSpent, testProject.expectTimeSpent, "ExpectTimeSpent should remain unchanged") && pass;
+    }
+    return pass;
+}
+
+function testUpdateProject_Success_UpdateParentId() {
+    Logger.log("\n--- Test: UpdateProject - Success Update ParentId ---");
+    
+    // Create two parent projects
+    const parent1 = addProject({
+        name: "Parent 1 for Project",
+        expectTimeSpent: 20
+    });
+    const parent2 = addProject({
+        name: "Parent 2 for Project",
+        expectTimeSpent: 25
+    });
+    
+    if (!parent1 || !parent2) {
+        Logger.log("❌ Failed to create parent projects");
+        return false;
+    }
+    
+    // Create a test project with first parent
+    const testProject = addProject({
+        name: "Test Project for Parent Update",
+        expectTimeSpent: 10,
+        parentId: parent1.projectId
+    });
+    
+    if (!testProject) {
+        Logger.log("❌ Failed to create test project");
+        return false;
+    }
+    
+    // Update parent ID
+    const updateData = {
+        parentId: parent2.projectId
+    };
+    
+    const result = updateProject(testProject.projectId, updateData);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.projectId, testProject.projectId, "Project ID should remain unchanged") && pass;
+        pass = assertStrictEquals(result.parentId, parent2.projectId, "Parent ID should be updated") && pass;
+    }
+    return pass;
+}
+
+function testUpdateProject_Success_ZeroTimes() {
+    Logger.log("\n--- Test: UpdateProject - Success Zero Times ---");
+    
+    // Create a test project
+    const testProject = addProject({
+        name: "Test Project for Zero Times",
+        expectTimeSpent: 10,
+        totalTimeSpent: 5
+    });
+    
+    if (!testProject) {
+        Logger.log("❌ Failed to create test project");
+        return false;
+    }
+    
+    // Update to zero times
+    const updateData = {
+        expectTimeSpent: 0,
+        totalTimeSpent: 0
+    };
+    
+    const result = updateProject(testProject.projectId, updateData);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return an object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.expectTimeSpent, 0, "ExpectTimeSpent should be updated to 0") && pass;
+        pass = assertStrictEquals(result.totalTimeSpent, 0, "TotalTimeSpent should be updated to 0") && pass;
+    }
+    return pass;
+}
+
+function testUpdateProject_Failure_InvalidProjectId() {
+    Logger.log("\n--- Test: UpdateProject - Failure Invalid ProjectId ---");
+    
+    const updateData = { name: "New Name" };
+    const result = updateProject(null, updateData);
+    
+    return assertNull(result, "Function should return null for invalid project ID");
+}
+
+function testUpdateProject_Failure_NotFound() {
+    Logger.log("\n--- Test: UpdateProject - Failure Not Found ---");
+    
+    const nonExistentId = "P-DOES-NOT-EXIST-" + Utilities.getUuid();
+    const updateData = { name: "New Name" };
+    const result = updateProject(nonExistentId, updateData);
+    
+    return assertNull(result, "Function should return null for non-existent project ID");
+}
+
+function testUpdateProject_Failure_InvalidUpdateData() {
+    Logger.log("\n--- Test: UpdateProject - Failure Invalid UpdateData ---");
+    
+    // Create a test project
+    const testProject = addProject({
+        name: "Test Project for Invalid Update",
+        expectTimeSpent: 10
+    });
+    
+    if (!testProject) {
+        Logger.log("❌ Failed to create test project");
+        return false;
+    }
+    
+    const result = updateProject(testProject.projectId, null);
+    
+    return assertNull(result, "Function should return null for invalid update data");
+}
+
+function testUpdateProject_Failure_NegativeExpectTime() {
+    Logger.log("\n--- Test: UpdateProject - Failure Negative ExpectTimeSpent ---");
+    
+    // Create a test project
+    const testProject = addProject({
+        name: "Test Project for Negative Time",
+        expectTimeSpent: 10
+    });
+    
+    if (!testProject) {
+        Logger.log("❌ Failed to create test project");
+        return false;
+    }
+    
+    const updateData = {
+        expectTimeSpent: -5
+    };
+    
+    const result = updateProject(testProject.projectId, updateData);
+    
+    return assertNull(result, "Function should return null for negative expectTimeSpent");
+}
+
+function testUpdateProject_Failure_NegativeTotalTime() {
+    Logger.log("\n--- Test: UpdateProject - Failure Negative TotalTimeSpent ---");
+    
+    // Create a test project
+    const testProject = addProject({
+        name: "Test Project for Negative Total Time",
+        expectTimeSpent: 10
+    });
+    
+    if (!testProject) {
+        Logger.log("❌ Failed to create test project");
+        return false;
+    }
+    
+    const updateData = {
+        totalTimeSpent: -3
+    };
+    
+    const result = updateProject(testProject.projectId, updateData);
+    
+    return assertNull(result, "Function should return null for negative totalTimeSpent");
+}
+
+function testUpdateProject_Failure_InvalidParentId() {
+    Logger.log("\n--- Test: UpdateProject - Failure Invalid ParentId ---");
+    
+    // Create a test project
+    const testProject = addProject({
+        name: "Test Project for Invalid Parent",
+        expectTimeSpent: 10
+    });
+    
+    if (!testProject) {
+        Logger.log("❌ Failed to create test project");
+        return false;
+    }
+    
+    const updateData = {
+        parentId: 12345 // Invalid type
+    };
+    
+    const result = updateProject(testProject.projectId, updateData);
+    
+    return assertNull(result, "Function should return null for invalid parent ID type");
+}
+
+function testUpdateProject_Failure_NonexistentParentId() {
+    Logger.log("\n--- Test: UpdateProject - Failure Nonexistent ParentId ---");
+    
+    // Create a test project
+    const testProject = addProject({
+        name: "Test Project for Nonexistent Parent",
+        expectTimeSpent: 10
+    });
+    
+    if (!testProject) {
+        Logger.log("❌ Failed to create test project");
+        return false;
+    }
+    
+    const updateData = {
+        parentId: "P-DOES-NOT-EXIST-" + Utilities.getUuid()
+    };
+    
+    const result = updateProject(testProject.projectId, updateData);
+    
+    return assertNull(result, "Function should return null for non-existent parent ID");
+}
+
+function testUpdateProject_Failure_CircularReference() {
+    Logger.log("\n--- Test: UpdateProject - Failure Circular Reference ---");
+    
+    // Create a parent project
+    const parentProject = addProject({
+        name: "Parent Project for Circular Test",
+        expectTimeSpent: 20
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ Failed to create parent project");
+        return false;
+    }
+    
+    // Create a child project
+    const childProject = addProject({
+        name: "Child Project for Circular Test",
+        expectTimeSpent: 10,
+        parentId: parentProject.projectId
+    });
+    
+    if (!childProject) {
+        Logger.log("❌ Failed to create child project");
+        return false;
+    }
+    
+    // Try to make parent project a child of its child (circular reference)
+    // Initial structure:    parentProject
+    //                         ↓
+    //                     childProject
+    //
+    // Attempted structure: parentProject
+    //                         ↓
+    //                     childProject
+    //                         ↓
+    //                     parentProject (circular!)
+    
+    const updateData = {
+        parentId: childProject.projectId
+    };
+    
+    const result = updateProject(parentProject.projectId, updateData);
+    
+    return assertNull(result, "Function should return null for circular reference");
+}
+
+function testUpdateProject_Failure_CircularReference_WithTask() {
+    Logger.log("\n--- Test: UpdateProject - Failure Circular Reference With Task ---");
+    
+    // Create a parent project
+    const parentProject = addProject({
+        name: "Parent Project for Task Circular Test",
+        expectTimeSpent: 20
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ Failed to create parent project");
+        return false;
+    }
+    
+    // Create a task under the project
+    const task = addTask({
+        name: "Task for Circular Test",
+        expectTimeSpent: 10,
+        parentId: parentProject.projectId
+    });
+    
+    if (!task) {
+        Logger.log("❌ Failed to create task");
+        return false;
+    }
+    
+    // Create a child project under the task
+    const childProject = addProject({
+        name: "Child Project for Task Circular Test",
+        expectTimeSpent: 5,
+        parentId: task.taskId
+    });
+    
+    if (!childProject) {
+        Logger.log("❌ Failed to create child project");
+        return false;
+    }
+    
+    // Try to make parent project a child of the child project (circular reference)
+    // Initial structure:    parentProject
+    //                         ↓
+    //                        task
+    //                         ↓
+    //                     childProject
+    //
+    // Attempted structure: parentProject
+    //                         ↓
+    //                        task
+    //                         ↓
+    //                     childProject
+    //                         ↓
+    //                     parentProject (circular!)
+    
+    const updateData = {
+        parentId: childProject.projectId
+    };
+    
+    const result = updateProject(parentProject.projectId, updateData);
+    
+    return assertNull(result, "Function should return null for circular reference through task");
+}

@@ -63,7 +63,7 @@
 | `parentId`        | String    | No       | ID of the parent project/task (if any)           | `"P-00000"` or `null`   |
 | `name`            | String    | Yes      | Title of the project                             | `"Develop Mgmt Tool"`   |
 | `description`     | String    | No       | Brief description of the project (defaults empty)| `"Personal learning project"`|
-| `status`          | String    | Yes      | Project status: “Not yet started”, "Ahead of schedule", "On track", "Behind schedule", "Stuck", "Paused", "Completed" | `"In progress"`         |
+| `status`          | String    | Yes      | Project status: "Not yet started", "Ahead of schedule", "On track", "Behind schedule", "Stuck", "Paused", "Completed" | `"On Track"`         |
 | `expectTimeSpent` | Number    | Yes      | Estimated time required for the project (hours)  | `7`                     |
 | `totalTimeSpent`  | Number    | No       | Accumulated time spent on the project (hours, defaults 0) | `1.5`                   |
 | `createdAt`       | DateTime  | Yes      | Timestamp of creation (auto-generated)           | `"2025-05-01T10:00:00Z"`|
@@ -76,7 +76,7 @@
 | `parentId`        | String    | Yes      | ID of the parent project/task                    | `"P-12345"`             |
 | `name`            | String    | Yes      | Title of the task                                | `"Design Database"`     |
 | `description`     | String    | No       | Brief description of the task (defaults empty)   | `"Design Sheet structure"`|
-| `status`          | String    | Yes      | Task status: “Not yet started”, "Ahead of schedule", "On track", "Behind schedule", "Stuck", "Paused", "Completed" | `"Todo"`                |
+| `status`          | String    | Yes      | Task status: "Not yet started", "Ahead of schedule", "On track", "Behind schedule", "Stuck", "Paused", "Completed" | `"Not yet started"`                |
 | `expectTimeSpent` | Number    | Yes      | Estimated time required for the task (hours)     | `1.5`                   |
 | `totalTimeSpent`  | Number    | No       | Accumulated time spent on the task (hours, defaults 0) | `0`                     |
 | `createdAt`       | DateTime  | Yes      | Timestamp of creation (auto-generated)           | `"2025-05-01T10:05:00Z"`|
@@ -99,7 +99,7 @@
 
 * **Create:**
     * User should be able to create a new project via the interface by entering `name`, optional `description`, and optionally specifying a `parentId` (selecting an existing project as parent).
-    * User should be able to set the initial `status` (from "Not yet started", "Ahead of time", "In progress", "Falling behind", "Stuck", "Hanging", "Completed").
+    * User should be able to set the initial `status` (from "Not yet started", "Ahead of schedule", "On track", "Behind schedule", "Stuck", "Paused", "Completed").
     * User should be able to input `expectTimeSpent` (estimated hours).
     * System automatically generates `projectId`, sets `totalTimeSpent` to 0, and records `createdAt`.
 * **Read:**
@@ -118,7 +118,7 @@
 
 * **Create:**
     * When viewing a project or task, the user should be able to create a new task. Requires inputting task `name`, optional `description`.
-    * User should be able to set the initial `status` (from "Not yet started", "Ahead of time", "In progress", "Falling behind", "Stuck", "Hanging", "Completed").
+    * User should be able to set the initial `status` (from "Not yet started", "Ahead of schedule", "On track", "Behind schedule", "Stuck", "Paused", "Completed").
     * User should be able to input `expectTimeSpent` (estimated hours).
     * System automatically generates `taskId`, sets `totalTimeSpent` to 0, and records `createdAt`.
 * **Read:**
