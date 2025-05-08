@@ -1,3 +1,8 @@
+// ------------------------------------------------------------------------------------------------
+// Create functions
+// ------------------------------------------------------------------------------------------------
+
+
 // JSDoc Comments:
 /**
  * Adds a new task to the Tasks worksheet.
@@ -104,4 +109,147 @@ function addTask(taskData) {
     // May also consider re-throwing the error or returning an error indicator later
     return null;
     }
+}
+
+
+// ------------------------------------------------------------------------------------------------
+// Read-only functions
+// ------------------------------------------------------------------------------------------------
+
+
+
+/**
+ * Gets all tasks from the Tasks worksheet
+ * @return {Array<object>} Array of task objects, or empty array if none found
+ */
+function getAllTasks() {
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(TASKS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${TASKS_SHEET_NAME}" not found!`);
+        }
+
+        const data = sheet.getDataRange().getValues();
+        return data.slice(1).map(row => rowToTask(row));
+        
+    } catch (error) {
+        Logger.log(`Failed to get all tasks: ${error}`);
+        return [];
+    }
+}
+
+
+
+/**
+ * Gets a task by its ID
+ * @param {string} taskId The task ID to find
+ * @return {object | null} The task object if found, null otherwise
+ */
+function getTaskById(taskId) {
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(TASKS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${TASKS_SHEET_NAME}" not found!`);
+        }
+
+        const data = sheet.getDataRange().getValues();
+        const taskRow = data.slice(1).find(row => row[0] === taskId);
+        
+        return taskRow ? rowToTask(taskRow) : null;
+        
+    } catch (error) {
+        Logger.log(`Failed to get task by ID: ${error}`);
+        return null;
+    }
+}
+
+
+/**
+ * Gets all tasks that are direct children of a specific parent ID
+ * @param {string} parentId The parent project/task ID
+ * @return {Array<object>} Array of task objects with the specified parent ID
+ */
+function getTasksByParentId(parentId) {
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(TASKS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${TASKS_SHEET_NAME}" not found!`);
+        }
+
+        const data = sheet.getDataRange().getValues();
+        return data.slice(1)
+            .filter(row => row[1] === parentId)
+            .map(row => rowToTask(row));
+        
+    } catch (error) {
+        Logger.log(`Failed to get tasks by parent ID: ${error}`);
+        return [];
+    }
+}
+
+
+
+/**
+ * Gets all tasks with a specific status
+ * @param {string} status The status to filter by
+ * @return {Array<object>} Array of task objects with the specified status
+ */
+function getTasksByStatus(status) {
+    if (!VALID_TASK_STATUSES.has(status)) {
+        Logger.log(`Invalid status provided: ${status}`);
+        return [];
+    }
+
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(TASKS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${TASKS_SHEET_NAME}" not found!`);
+        }
+
+        const data = sheet.getDataRange().getValues();
+        return data.slice(1)
+            .filter(row => row[4] === status)
+            .map(row => rowToTask(row));
+        
+    } catch (error) {
+        Logger.log(`Failed to get tasks by status: ${error}`);
+        return [];
+    }
+}
+
+
+
+
+
+
+
+// ------------------------------------------------------------------------------------------------
+// Helper functions
+// ------------------------------------------------------------------------------------------------
+
+
+/**
+ * Converts a row of data into a task object
+ * @param {Array} row The row data array
+ * @return {object} The task object
+ */
+function rowToTask(row) {
+    return {
+        taskId: row[0],
+        parentId: row[1],
+        name: row[2],
+        description: row[3],
+        status: row[4],
+        expectTimeSpent: row[5],
+        totalTimeSpent: row[6],
+        createdAt: new Date(row[7])
+    };
 }

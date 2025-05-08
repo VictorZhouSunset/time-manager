@@ -1,3 +1,8 @@
+// ------------------------------------------------------------------------------------------------
+// Create functions
+// ------------------------------------------------------------------------------------------------
+
+
 // JSDoc Comments:
 /**
  * Adds a new project to the Projects worksheet.
@@ -104,4 +109,148 @@ function addProject(projectData) {
     // May also consider re-throwing the error or returning an error indicator later
     return null;
     }
+}
+
+// ------------------------------------------------------------------------------------------------
+// Read-only functions
+// ------------------------------------------------------------------------------------------------
+
+
+/**
+ * Gets all projects from the Projects worksheet
+ * @return {Array<object>} Array of project objects, or empty array if none found
+ */
+function getAllProjects() {
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(PROJECTS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${PROJECTS_SHEET_NAME}" not found!`);
+        }
+
+        const data = sheet.getDataRange().getValues();
+        // Remove header row and convert remaining rows to project objects
+        return data.slice(1).map(row => rowToProject(row));
+        
+    } catch (error) {
+        Logger.log(`Failed to get all projects: ${error}`);
+        return [];
+    }
+}
+
+
+/**
+ * Gets a project by its ID
+ * @param {string} projectId The project ID to find
+ * @return {object | null} The project object if found, null otherwise
+ */
+function getProjectById(projectId) {
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(PROJECTS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${PROJECTS_SHEET_NAME}" not found!`);
+        }
+
+        const data = sheet.getDataRange().getValues();
+        const projectRow = data.slice(1).find(row => row[0] === projectId);
+        
+        return projectRow ? rowToProject(projectRow) : null;
+        
+    } catch (error) {
+        Logger.log(`Failed to get project by ID: ${error}`);
+        return null;
+    }
+}
+
+
+/**
+ * Gets all projects that are direct children of a specific parent ID
+ * @param {string} parentId The parent project ID
+ * @return {Array<object>} Array of project objects with the specified parent ID
+ */
+function getProjectsByParentId(parentId) {
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(PROJECTS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${PROJECTS_SHEET_NAME}" not found!`);
+        }
+
+        const data = sheet.getDataRange().getValues();
+        return data.slice(1)
+            .filter(row => row[1] === parentId)
+            .map(row => rowToProject(row));
+        
+    } catch (error) {
+        Logger.log(`Failed to get projects by parent ID: ${error}`);
+        return [];
+    }
+}
+
+
+/**
+ * Gets all projects with a specific status
+ * @param {string} status The status to filter by
+ * @return {Array<object>} Array of project objects with the specified status
+ */
+function getProjectsByStatus(status) {
+    if (!VALID_PROJECT_STATUSES.has(status)) {
+        Logger.log(`Error: Invalid status provided: ${status}`);
+        return [];
+    }
+
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(PROJECTS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${PROJECTS_SHEET_NAME}" not found!`);
+        }
+
+        const data = sheet.getDataRange().getValues();
+        return data.slice(1)
+            .filter(row => row[4] === status)
+            .map(row => rowToProject(row));
+        
+    } catch (error) {
+        Logger.log(`Failed to get projects by status: ${error}`);
+        return [];
+    }
+}
+
+
+
+
+
+
+
+
+
+
+// ------------------------------------------------------------------------------------------------
+// Helper functions
+// ------------------------------------------------------------------------------------------------
+
+
+
+/**
+ * Converts a row of data into a project object
+ * @param {Array} row The row data array
+ * @return {object} The project object
+ */
+function rowToProject(row) {
+    return {
+        projectId: row[0],
+        parentId: row[1],
+        name: row[2],
+        description: row[3],
+        status: row[4],
+        expectTimeSpent: row[5],
+        totalTimeSpent: row[6],
+        createdAt: new Date(row[7])
+    };
 }

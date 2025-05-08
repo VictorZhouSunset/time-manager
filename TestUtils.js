@@ -65,3 +65,33 @@ function assertInstanceOf(actual, expectedType, message) {
         return false;
     }
 }
+
+/**
+ * Asserts that a value is an array.
+ * @param {*} value The actual value.
+ * @param {string} message The message to log for this assertion.
+ * @return {boolean} True if assertion passes, false otherwise.
+ */
+function assertArray(value, message) {
+    if (!Array.isArray(value)) {
+        Logger.log(`FAILURE: ${message}. Expected array, got ${typeof value}`);
+        return false;
+    }
+    Logger.log(`SUCCESS: ${message}.`);
+    return true;
+}
+
+/**
+ * Asserts that a value is a function.
+ * @param {*} value The actual value.
+ * @param {string} message The message to log for this assertion.
+ * @return {boolean} True if assertion passes, false otherwise.
+ */
+function assertFunction(value, message) {
+    if (typeof value !== 'function') {
+        Logger.log(`FAILURE: ${message}. Expected function, got ${typeof value}`);
+        return false;
+    }
+    Logger.log(`SUCCESS: ${message}.`);
+    return true;
+}

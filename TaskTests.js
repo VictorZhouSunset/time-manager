@@ -1,9 +1,8 @@
+// --- Test Runner ---
 function runAllAddTaskTests() {
     Logger.log("======== RUNNING ADDTASK TESTS ========");
     let allTestsPassed = true;
 
-    // --- Helper: Clean up sheet for fresh testing (Optional, use with caution) ---
-    // clearSheetData(TASKS_SHEET_NAME); // Make sure TASKS_SHEET_NAME is defined
 
     // --- Individual Test Cases ---
     const DUMMY_VALID_PROJECT_ID = 'P-dummy-for-task-tests'; // For tests that DO provide a parentId
@@ -36,6 +35,35 @@ function runAllAddTaskTests() {
     }
     return allTestsPassed;
 }
+
+function runAllGetTaskTests() {
+    Logger.log("======== RUNNING GETTASK TESTS ========");
+    let allTestsPassed = true;
+
+    // --- Individual Test Cases ---
+    if (!testGetAllTasks_Success_Basic()) allTestsPassed = false;
+    
+    if (!testGetTaskById_Success_Basic()) allTestsPassed = false;
+    if (!testGetTaskById_Failure_NotFound()) allTestsPassed = false;
+    if (!testGetTaskById_Failure_InvalidId()) allTestsPassed = false;
+    
+    if (!testGetTasksByParentId_Success_Basic()) allTestsPassed = false;
+    if (!testGetTasksByParentId_Success_NoChildren()) allTestsPassed = false;
+    
+    if (!testGetTasksByStatus_Success_Basic()) allTestsPassed = false;
+    if (!testGetTasksByStatus_Success_NoMatches()) allTestsPassed = false;
+    if (!testGetTasksByStatus_Failure_InvalidStatus()) allTestsPassed = false;
+
+    Logger.log("======== GETTASK TESTS COMPLETE ========");
+    if (allTestsPassed) {
+        Logger.log("🎉🎉🎉 ALL GETTASK TESTS PASSED! 🎉🎉🎉");
+    } else {
+        Logger.log("❌❌❌ SOME GETTASK TESTS FAILED. Check logs above. ❌❌❌");
+    }
+    return allTestsPassed;
+}
+
+
 
 // ---------------------------------------------------------------------------------------
 // --- Test Cases for addTask ---
@@ -228,3 +256,199 @@ function testAddTask_Warning_NegativeTotalTime(parentId) {
     }
     return pass;
 }
+
+
+// ---------------------------------------------------------------------------------------
+// --- Test Cases for getTask functions ---
+// ---------------------------------------------------------------------------------------
+
+function testGetAllTasks_Success_Basic() {
+    Logger.log("\n--- Test: GetAllTasks - Success Basic ---");
+    const result = getAllTasks();
+    let pass = true;
+    
+    pass = assertArray(result, "Function should return an array of tasks") && pass;
+    // We don't test the exact length as it may vary, but we can check structure if there are items
+    if (result.length > 0) {
+        const firstTask = result[0];
+        pass = assertTruthy(firstTask.taskId && firstTask.taskId.startsWith('T-'), "Task should have a taskId starting with 'T-'") && pass;
+        pass = assertTruthy('name' in firstTask, "Task should have a name property") && pass;
+        pass = assertTruthy('status' in firstTask, "Task should have a status property") && pass;
+        pass = assertTruthy('expectTimeSpent' in firstTask, "Task should have an expectTimeSpent property") && pass;
+    }
+    
+    return pass;
+}
+
+function testGetTaskById_Success_Basic() {
+    Logger.log("\n--- Test: GetTaskById - Success Basic ---");
+    // First, create a task to ensure we have one to retrieve
+    const taskData = {
+        name: "Task for GetById Test",
+        expectTimeSpent: 3
+    };
+    const createdTask = addTask(taskData);
+    
+    if (!createdTask) {
+        Logger.log("  ❌ FAIL: Could not create test task for GetTaskById test");
+        return false;
+    }
+    
+    // Now try to retrieve it
+    const result = getTaskById(createdTask.taskId);
+    let pass = true;
+    
+    pass = assertTruthy(result, "Function should return a task object") && pass;
+    if (result) {
+        pass = assertStrictEquals(result.taskId, createdTask.taskId, "TaskId should match") && pass;
+        pass = assertStrictEquals(result.name, createdTask.name, "Name should match") && pass;
+        pass = assertStrictEquals(result.expectTimeSpent, createdTask.expectTimeSpent, "ExpectTimeSpent should match") && pass;
+    }
+    
+    return pass;
+}
+
+function testGetTaskById_Failure_NotFound() {
+    Logger.log("\n--- Test: GetTaskById - Failure Not Found ---");
+    const nonExistentId = 'T-nonexistent-task-id';
+    const result = getTaskById(nonExistentId);
+    
+    return assertNull(result, "Function should return null for non-existent task ID");
+}
+
+function testGetTaskById_Failure_InvalidId() {
+    Logger.log("\n--- Test: GetTaskById - Failure Invalid ID ---");
+    // Test with various invalid IDs
+    const invalidIds = [null, undefined, 123, "", "   ", "invalid-format"];
+    let pass = true;
+    
+    for (const invalidId of invalidIds) {
+        const result = getTaskById(invalidId);
+        pass = assertNull(result, `Function should return null for invalid ID: ${invalidId}`) && pass;
+    }
+    
+    return pass;
+}
+
+function testGetTasksByParentId_Success_Basic() {
+    Logger.log("\n--- Test: GetTasksByParentId - Success Basic ---");
+    // First, create a parent project/task
+    const parentId = 'P-test-parent-for-tasks';
+    
+    // Create a few tasks with this parent
+    const taskData1 = {
+        name: "Child Task 1",
+        expectTimeSpent: 2,
+        parentId: parentId
+    };
+    const taskData2 = {
+        name: "Child Task 2",
+        expectTimeSpent: 3,
+        parentId: parentId
+    };
+    
+    const createdTask1 = addTask(taskData1);
+    const createdTask2 = addTask(taskData2);
+    
+    if (!createdTask1 || !createdTask2) {
+        Logger.log("  ❌ FAIL: Could not create test tasks for GetTasksByParentId test");
+        return false;
+    }
+    
+    // Now get tasks by parent ID
+    const result = getTasksByParentId(parentId);
+    let pass = true;
+    
+    pass = assertArray(result, "Function should return an array of tasks") && pass;
+    pass = assertTruthy(result.length >= 2, "Should find at least the 2 tasks we just created") && pass;
+    
+    // Check if our created tasks are in the results
+    const foundTask1 = result.some(task => task.taskId === createdTask1.taskId);
+    const foundTask2 = result.some(task => task.taskId === createdTask2.taskId);
+    
+    pass = assertTruthy(foundTask1, "Should find the first created task") && pass;
+    pass = assertTruthy(foundTask2, "Should find the second created task") && pass;
+    
+    return pass;
+}
+
+function testGetTasksByParentId_Success_NoChildren() {
+    Logger.log("\n--- Test: GetTasksByParentId - Success No Children ---");
+    // Use a parent ID that shouldn't have any children
+    const unusedParentId = 'P-no-children-tasks-test';
+    
+    const result = getTasksByParentId(unusedParentId);
+    let pass = true;
+    
+    pass = assertArray(result, "Function should return an array") && pass;
+    pass = assertStrictEquals(result.length, 0, "Array should be empty for parent with no children") && pass;
+    
+    return pass;
+}
+
+function testGetTasksByStatus_Success_Basic() {
+    Logger.log("\n--- Test: GetTasksByStatus - Success Basic ---");
+    // Create a task with a specific status
+    const testStatus = "On track";
+    const taskData = {
+        name: "Status Test Task",
+        expectTimeSpent: 4,
+        status: testStatus
+    };
+    
+    const createdTask = addTask(taskData);
+    
+    if (!createdTask) {
+        Logger.log("  ❌ FAIL: Could not create test task for GetTasksByStatus test");
+        return false;
+    }
+    
+    // Now get tasks by status
+    const result = getTasksByStatus(testStatus);
+    let pass = true;
+    
+    pass = assertArray(result, "Function should return an array of tasks") && pass;
+    pass = assertTruthy(result.length > 0, "Should find at least one task with the status") && pass;
+    
+    // Check if all returned tasks have the correct status
+    const allHaveCorrectStatus = result.every(task => task.status === testStatus);
+    pass = assertTruthy(allHaveCorrectStatus, "All returned tasks should have the requested status") && pass;
+    
+    // Check if our created task is in the results
+    const foundCreatedTask = result.some(task => task.taskId === createdTask.taskId);
+    pass = assertTruthy(foundCreatedTask, "Should find the task we just created") && pass;
+    
+    return pass;
+}
+
+function testGetTasksByStatus_Success_NoMatches() {
+    Logger.log("\n--- Test: GetTasksByStatus - Success No Matches ---");
+    // Use a valid but unlikely status
+    const unusedStatus = "Completed"; // Assuming there are no completed tasks for this test
+    
+    const result = getTasksByStatus(unusedStatus);
+    let pass = true;
+    
+    pass = assertArray(result, "Function should return an array") && pass;
+    // We can't guarantee there are no tasks with this status, but we can check the array type
+    
+    return pass;
+}
+
+function testGetTasksByStatus_Failure_InvalidStatus() {
+    Logger.log("\n--- Test: GetTasksByStatus - Failure Invalid Status ---");
+    const invalidStatus = "Not a valid status";
+    
+    const result = getTasksByStatus(invalidStatus);
+    let pass = true;
+    
+    pass = assertArray(result, "Function should return an empty array for invalid status") && pass;
+    pass = assertStrictEquals(result.length, 0, "Array should be empty for invalid status") && pass;
+    
+    return pass;
+}
+
+
+
+
+

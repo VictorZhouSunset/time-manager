@@ -1,3 +1,9 @@
+// ------------------------------------------------------------------------------------------------
+// Create functions
+// ------------------------------------------------------------------------------------------------
+
+
+
 // JSDoc Comments:
 /**
  * Adds a new calendar event to the CalendarEvents worksheet.
@@ -89,4 +95,121 @@ function addCalendarEvent(eventData) {
         // If any error occurs, return null
         return null;
     }
+}
+
+
+
+// ------------------------------------------------------------------------------------------------
+// Read-only functions
+// ------------------------------------------------------------------------------------------------
+
+
+
+/**
+ * Gets all calendar events from the CalendarEvents worksheet
+ * @return {Array<object>} Array of calendar event objects, or empty array if none found
+ */
+function getAllEvents() {
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(EVENTS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${EVENTS_SHEET_NAME}" not found!`);
+        }
+
+        const data = sheet.getDataRange().getValues();
+        return data.slice(1).map(row => rowToEvent(row));
+        
+    } catch (error) {
+        Logger.log(`Failed to get all calendar events: ${error}`);
+        return [];
+    }
+}
+
+
+/**
+ * Gets a calendar event by its ID
+ * @param {string} eventId The event ID to find
+ * @return {object | null} The calendar event object if found, null otherwise
+ */
+function getEventById(eventId) {
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(EVENTS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${EVENTS_SHEET_NAME}" not found!`);
+        }
+
+        const data = sheet.getDataRange().getValues();
+        const eventRow = data.slice(1).find(row => row[0] === eventId);
+        
+        return eventRow ? rowToEvent(eventRow) : null;
+        
+    } catch (error) {
+        Logger.log(`Failed to get calendar event by ID: ${error}`);
+        return null;
+    }
+}
+
+
+
+/**
+ * Gets all calendar events with a specific parent ID
+ * @param {string} parentId The parent project/task ID
+ * @return {Array<object>} Array of calendar event objects with the specified parent ID
+ */
+function getEventsByParentId(parentId) {
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(EVENTS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${EVENTS_SHEET_NAME}" not found!`);
+        }
+
+        const data = sheet.getDataRange().getValues();
+        return data.slice(1)
+            .filter(row => row[1] === parentId)
+            .map(row => rowToEvent(row));
+        
+    } catch (error) {
+        Logger.log(`Failed to get calendar events by parent ID: ${error}`);
+        return [];
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ------------------------------------------------------------------------------------------------
+// Helper functions
+// ------------------------------------------------------------------------------------------------
+
+
+/**
+ * Converts a row of data into a calendar event object
+ * @param {Array} row The row data array
+ * @return {object} The calendar event object
+ */
+function rowToEvent(row) {
+    return {
+        eventId: row[0],
+        parentId: row[1],
+        name: row[2],
+        description: row[3],
+        eventStart: new Date(row[4]),
+        eventEnd: new Date(row[5]),
+        createdAt: new Date(row[6])
+    };
 }
