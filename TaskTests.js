@@ -36,8 +36,10 @@ function runAllAddTaskTests() {
     Logger.log("======== ADDTASK TESTS COMPLETE ========");
     if (allTestsPassed) {
         Logger.log("🎉🎉🎉 ALL ADDTASK TESTS PASSED! 🎉🎉🎉");
+        cleanupTestData();
     } else {
         Logger.log("❌❌❌ SOME ADDTASK TESTS FAILED. Check logs above. ❌❌❌");
+        Logger.log("⚠️ Test data cleanup skipped to preserve failed test context");
     }
     return allTestsPassed;
 }
@@ -63,8 +65,10 @@ function runAllGetTaskTests() {
     Logger.log("======== GETTASK TESTS COMPLETE ========");
     if (allTestsPassed) {
         Logger.log("🎉🎉🎉 ALL GETTASK TESTS PASSED! 🎉🎉🎉");
+        cleanupTestData();
     } else {
         Logger.log("❌❌❌ SOME GETTASK TESTS FAILED. Check logs above. ❌❌❌");
+        Logger.log("⚠️ Test data cleanup skipped to preserve failed test context");
     }
     return allTestsPassed;
 }
@@ -93,8 +97,10 @@ function runAllUpdateTaskTests() {
     Logger.log("======== UPDATETASK TESTS COMPLETE ========");
     if (allTestsPassed) {
         Logger.log("🎉🎉🎉 ALL UPDATETASK TESTS PASSED! 🎉🎉🎉");
+        cleanupTestData();
     } else {
         Logger.log("❌❌❌ SOME UPDATETASK TESTS FAILED. Check logs above. ❌❌❌");
+        Logger.log("⚠️ Test data cleanup skipped to preserve failed test context");
     }
     return allTestsPassed;
 }
@@ -141,8 +147,10 @@ function runAllDeleteTaskTests() {
     Logger.log("======== DELETETASK TESTS COMPLETE ========");
     if (allTestsPassed) {
         Logger.log("🎉🎉🎉 ALL DELETETASK TESTS PASSED! 🎉🎉🎉");
+        cleanupTestData();
     } else {
         Logger.log("❌❌❌ SOME DELETETASK TESTS FAILED. Check logs above. ❌❌❌");
+        Logger.log("⚠️ Test data cleanup skipped to preserve failed test context");
     }
     return allTestsPassed;
 }
@@ -155,10 +163,10 @@ function runAllDeleteTaskTests() {
 function testAddTask_Success_Basic_WithParent() {
     Logger.log("\n--- Test: AddTask - Success Basic with ParentId ---");
     // Create a parent project for this test
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Test Parent Project for Basic Task", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
@@ -170,7 +178,7 @@ function testAddTask_Success_Basic_WithParent() {
         expectTimeSpent: 5,
         parentId: parentProject.projectId
     };
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     let pass = true;
 
     pass = assertTruthy(result, "Function should return an object") && pass;
@@ -194,7 +202,7 @@ function testAddTask_Success_Basic_NoParent() {
         expectTimeSpent: 7
         // parentId is intentionally omitted
     };
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     let pass = true;
 
     pass = assertTruthy(result, "Function should return an object") && pass;
@@ -212,10 +220,10 @@ function testAddTask_Success_Basic_NoParent() {
 function testAddTask_Success_AllFields_WithParent() {
     Logger.log("\n--- Test: AddTask - Success All Fields with ParentId ---");
     // Create a parent project for this test
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Test Parent Project for Complete Task", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
@@ -230,7 +238,7 @@ function testAddTask_Success_AllFields_WithParent() {
         expectTimeSpent: 15,
         totalTimeSpent: 2.5
     };
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     let pass = true;
 
     pass = assertTruthy(result, "Function should return an object") && pass;
@@ -250,10 +258,10 @@ function testAddTask_Success_AllFields_WithParent() {
 function testAddTask_Success_SpecificStatusAndTime_WithParent() {
     Logger.log("\n--- Test: AddTask - Success Specific Status & Time with ParentId ---");
     // Create a parent project for this test
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Test Parent Project for Status Task", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
@@ -267,7 +275,7 @@ function testAddTask_Success_SpecificStatusAndTime_WithParent() {
         status: "Paused", // Using 'Paused' from your updated status list
         totalTimeSpent: 1
     };
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     let pass = true;
     pass = assertTruthy(result, "Function should return an object") && pass;
     if (result) {
@@ -281,10 +289,10 @@ function testAddTask_Success_SpecificStatusAndTime_WithParent() {
 function testAddTask_Failure_MissingName() {
     Logger.log("\n--- Test: AddTask - Failure Missing Name (with ParentId provided) ---");
     // Create a parent project for this test
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Test Parent Project for Missing Name", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
@@ -292,14 +300,14 @@ function testAddTask_Failure_MissingName() {
     }
 
     const input = { expectTimeSpent: 10, parentId: parentProject.projectId };
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     return assertNull(result, "Function should return null when name is missing");
 }
 
 function testAddTask_Failure_MissingName_NoParent() {
     Logger.log("\n--- Test: AddTask - Failure Missing Name (without ParentId) ---");
     const input = { expectTimeSpent: 10 }; // No parentId, no name
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     return assertNull(result, "Function should return null when name is missing (no parentId case)");
 }
 
@@ -307,10 +315,10 @@ function testAddTask_Failure_MissingName_NoParent() {
 function testAddTask_Failure_MissingExpectTime() {
     Logger.log("\n--- Test: AddTask - Failure Missing expectTimeSpent (with ParentId provided) ---");
     // Create a parent project for this test
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Test Parent Project for Missing Time", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
@@ -318,17 +326,17 @@ function testAddTask_Failure_MissingExpectTime() {
     }
 
     const input = { name: "Task No Time", parentId: parentProject.projectId };
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     return assertNull(result, "Function should return null when expectTimeSpent is missing");
 }
 
 function testAddTask_Failure_NegativeExpectTime() {
     Logger.log("\n--- Test: AddTask - Failure Negative expectTimeSpent (with ParentId provided) ---");
     // Create a parent project for this test
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Test Parent Project for Negative Time", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
@@ -336,14 +344,14 @@ function testAddTask_Failure_NegativeExpectTime() {
     }
 
     const input = { name: "Bad Time Task", expectTimeSpent: -2, parentId: parentProject.projectId };
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     return assertNull(result, "Function should return null for negative expectTimeSpent");
 }
 
 function testAddTask_Failure_InvalidParentIdType() {
     Logger.log("\n--- Test: AddTask - Failure Invalid ParentId Type (if provided) ---");
     const input = { name: "Bad ParentId Task", expectTimeSpent: 5, parentId: 12345 }; // parentId is a number
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     // This test expects addTask to fail if parentId IS PROVIDED and is not a string
     return assertNull(result, "Function should return null for non-string parentId if provided");
 }
@@ -351,7 +359,7 @@ function testAddTask_Failure_InvalidParentIdType() {
 function testAddTask_Failure_EmptyParentIdString() {
     Logger.log("\n--- Test: AddTask - Failure Empty ParentId String (if provided) ---");
     const input = { name: "Empty ParentId Task", expectTimeSpent: 5, parentId: "  " }; // parentId is an empty/whitespace string
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     // This test expects addTask to fail if parentId IS PROVIDED and is an empty string
     return assertNull(result, "Function should return null for empty string parentId if provided");
 }
@@ -363,7 +371,7 @@ function testAddTask_Failure_NonexistentParentId() {
         expectTimeSpent: 5, 
         parentId: "P-DOES-NOT-EXIST-" + Utilities.getUuid() 
     };
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     // This test expects addTask to fail if parentId doesn't exist in the database
     return assertNull(result, "Function should return null for nonexistent parentId");
 }
@@ -372,10 +380,10 @@ function testAddTask_Failure_NonexistentParentId() {
 function testAddTask_Warning_InvalidDescriptionType() {
     Logger.log("\n--- Test: AddTask - Warning Invalid Description Type (should default, with ParentId) ---");
     // Create a parent project for this test
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Test Parent Project for Invalid Desc", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
@@ -383,7 +391,7 @@ function testAddTask_Warning_InvalidDescriptionType() {
     }
 
     const input = { name: "Desc Type Task", expectTimeSpent: 5, parentId: parentProject.projectId, description: 123 };
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     let pass = true;
     pass = assertTruthy(result, "Function should still create task") && pass;
     if (result) {
@@ -395,10 +403,10 @@ function testAddTask_Warning_InvalidDescriptionType() {
 function testAddTask_Warning_InvalidStatus() {
     Logger.log("\n--- Test: AddTask - Warning Invalid Status (should default, with ParentId) ---");
     // Create a parent project for this test
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Test Parent Project for Invalid Status", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
@@ -406,7 +414,7 @@ function testAddTask_Warning_InvalidStatus() {
     }
 
     const input = { name: "Status Test Task", expectTimeSpent: 5, parentId: parentProject.projectId, status: "Way Too Cool" };
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     let pass = true;
     pass = assertTruthy(result, "Function should still create task") && pass;
     if (result) {
@@ -418,10 +426,10 @@ function testAddTask_Warning_InvalidStatus() {
 function testAddTask_Warning_InvalidTotalTimeType() {
     Logger.log("\n--- Test: AddTask - Warning Invalid totalTimeSpent Type (should default, with ParentId) ---");
     // Create a parent project for this test
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Test Parent Project for Invalid Time Type", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
@@ -429,7 +437,7 @@ function testAddTask_Warning_InvalidTotalTimeType() {
     }
 
     const input = { name: "Total Time Type Task", expectTimeSpent: 5, parentId: parentProject.projectId, totalTimeSpent: "one hour" };
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     let pass = true;
     pass = assertTruthy(result, "Function should still create task") && pass;
     if (result) {
@@ -441,10 +449,10 @@ function testAddTask_Warning_InvalidTotalTimeType() {
 function testAddTask_Warning_NegativeTotalTime() {
     Logger.log("\n--- Test: AddTask - Warning Negative totalTimeSpent (should default, with ParentId) ---");
     // Create a parent project for this test
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Test Parent Project for Negative Total Time", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ FAILED TO CREATE TEST PARENT PROJECT - ABORTING TEST");
@@ -452,7 +460,7 @@ function testAddTask_Warning_NegativeTotalTime() {
     }
 
     const input = { name: "Negative Total Time Task", expectTimeSpent: 5, parentId: parentProject.projectId, totalTimeSpent: -3 };
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     let pass = true;
     pass = assertTruthy(result, "Function should still create task") && pass;
     if (result) {
@@ -464,7 +472,7 @@ function testAddTask_Warning_NegativeTotalTime() {
 function testAddTask_Success_ZeroTimes() {
     Logger.log("\n--- Test: AddTask - Success Zero Times ---");
     const input = { name: "Zero Time Task", expectTimeSpent: 0, totalTimeSpent: 0 };
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     let pass = true;
     pass = assertTruthy(result, "Function should return an object") && pass;
     if (result) {
@@ -478,11 +486,11 @@ function testAddTask_Success_TaskWithTaskParent() {
     Logger.log("\n--- Test: AddTask - Success Task with Task Parent ---");
     
     // First create a parent task
-    const parentTask = addTask({ name: "Parent Task", expectTimeSpent: 10 });
+    const parentTask = registerTestTask(addTask({ name: "Parent Task", expectTimeSpent: 10 }));
     
     // Then create a child task referencing the parent task
     const input = { name: "Child of Task", expectTimeSpent: 5, parentId: parentTask.taskId };
-    const result = addTask(input);
+    const result = registerTestTask(addTask(input));
     
     let pass = true;
     pass = assertTruthy(result, "Function should return an object") && pass;
@@ -524,7 +532,7 @@ function testGetTaskById_Success_Basic() {
         name: "Task for GetById Test",
         expectTimeSpent: 3
     };
-    const createdTask = addTask(taskData);
+    const createdTask = registerTestTask(addTask(taskData));
     
     if (!createdTask) {
         Logger.log("  ❌ FAIL: Could not create test task for GetTaskById test");
@@ -570,10 +578,10 @@ function testGetTaskById_Failure_InvalidId() {
 function testGetTasksByParentId_Success_Basic() {
     Logger.log("\n--- Test: GetTasksByParentId - Success Basic ---");
     // First, create a parent project/task
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Test Parent for Tasks", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("  ❌ FAIL: Could not create test parent project for GetTasksByParentId test");
@@ -592,8 +600,8 @@ function testGetTasksByParentId_Success_Basic() {
         parentId: parentProject.projectId
     };
     
-    const createdTask1 = addTask(taskData1);
-    const createdTask2 = addTask(taskData2);
+    const createdTask1 = registerTestTask(addTask(taskData1));
+    const createdTask2 = registerTestTask(addTask(taskData2));
     
     if (!createdTask1 || !createdTask2) {
         Logger.log("  ❌ FAIL: Could not create test tasks for GetTasksByParentId test");
@@ -641,7 +649,7 @@ function testGetTasksByStatus_Success_Basic() {
         status: testStatus
     };
     
-    const createdTask = addTask(taskData);
+    const createdTask = registerTestTask(addTask(taskData));
     
     if (!createdTask) {
         Logger.log("  ❌ FAIL: Could not create test task for GetTasksByStatus test");
@@ -702,10 +710,10 @@ function testUpdateTask_Success_Basic() {
     Logger.log("\n--- Test: UpdateTask - Success Basic ---");
     
     // Create a test task
-    const testTask = addTask({
+    const testTask = registerTestTask(addTask({
         name: "Test Task for Update",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testTask) {
         Logger.log("❌ Failed to create test task");
@@ -732,10 +740,10 @@ function testUpdateTask_Success_AllFields() {
     Logger.log("\n--- Test: UpdateTask - Success All Fields ---");
     
     // Create a parent task for this test
-    const parentTask = addTask({
+    const parentTask = registerTestTask(addTask({
         name: "Parent for Task Update",
         expectTimeSpent: 20
-    });
+    }));
     
     if (!parentTask) {
         Logger.log("❌ Failed to create parent task");
@@ -743,10 +751,10 @@ function testUpdateTask_Success_AllFields() {
     }
     
     // Create a test task
-    const testTask = addTask({
+    const testTask = registerTestTask(addTask({
         name: "Test Task for Full Update",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testTask) {
         Logger.log("❌ Failed to create test task");
@@ -783,12 +791,12 @@ function testUpdateTask_Success_PartialUpdate() {
     Logger.log("\n--- Test: UpdateTask - Success Partial Update ---");
     
     // Create a test task with all fields
-    const testTask = addTask({
+    const testTask = registerTestTask(addTask({
         name: "Test Task for Partial Update",
         description: "Original description",
         expectTimeSpent: 10,
         status: "Not yet started"
-    });
+    }));
     
     if (!testTask) {
         Logger.log("❌ Failed to create test task");
@@ -819,14 +827,14 @@ function testUpdateTask_Success_UpdateParentId() {
     Logger.log("\n--- Test: UpdateTask - Success Update ParentId ---");
     
     // Create two parent tasks
-    const parent1 = addTask({
+    const parent1 = registerTestTask(addTask({
         name: "Parent 1 for Task",
         expectTimeSpent: 20
-    });
-    const parent2 = addTask({
+    }));
+    const parent2 = registerTestTask(addTask({
         name: "Parent 2 for Task",
         expectTimeSpent: 25
-    });
+    }));
     
     if (!parent1 || !parent2) {
         Logger.log("❌ Failed to create parent tasks");
@@ -834,11 +842,11 @@ function testUpdateTask_Success_UpdateParentId() {
     }
     
     // Create a test task with first parent
-    const testTask = addTask({
+    const testTask = registerTestTask(addTask({
         name: "Test Task for Parent Update",
         expectTimeSpent: 10,
         parentId: parent1.taskId
-    });
+    }));
     
     if (!testTask) {
         Logger.log("❌ Failed to create test task");
@@ -865,11 +873,11 @@ function testUpdateTask_Success_ZeroTimes() {
     Logger.log("\n--- Test: UpdateTask - Success Zero Times ---");
     
     // Create a test task
-    const testTask = addTask({
+    const testTask = registerTestTask(addTask({
         name: "Test Task for Zero Times",
         expectTimeSpent: 10,
         totalTimeSpent: 5
-    });
+    }));
     
     if (!testTask) {
         Logger.log("❌ Failed to create test task");
@@ -916,10 +924,10 @@ function testUpdateTask_Failure_InvalidUpdateData() {
     Logger.log("\n--- Test: UpdateTask - Failure Invalid UpdateData ---");
     
     // Create a test task
-    const testTask = addTask({
+    const testTask = registerTestTask(addTask({
         name: "Test Task for Invalid Update",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testTask) {
         Logger.log("❌ Failed to create test task");
@@ -935,10 +943,10 @@ function testUpdateTask_Failure_NegativeExpectTime() {
     Logger.log("\n--- Test: UpdateTask - Failure Negative ExpectTimeSpent ---");
     
     // Create a test task
-    const testTask = addTask({
+    const testTask = registerTestTask(addTask({
         name: "Test Task for Negative Time",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testTask) {
         Logger.log("❌ Failed to create test task");
@@ -958,10 +966,10 @@ function testUpdateTask_Failure_NegativeTotalTime() {
     Logger.log("\n--- Test: UpdateTask - Failure Negative TotalTimeSpent ---");
     
     // Create a test task
-    const testTask = addTask({
+    const testTask = registerTestTask(addTask({
         name: "Test Task for Negative Total Time",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testTask) {
         Logger.log("❌ Failed to create test task");
@@ -981,10 +989,10 @@ function testUpdateTask_Failure_InvalidParentId() {
     Logger.log("\n--- Test: UpdateTask - Failure Invalid ParentId ---");
     
     // Create a test task
-    const testTask = addTask({
+    const testTask = registerTestTask(addTask({
         name: "Test Task for Invalid Parent",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testTask) {
         Logger.log("❌ Failed to create test task");
@@ -1004,10 +1012,10 @@ function testUpdateTask_Failure_NonexistentParentId() {
     Logger.log("\n--- Test: UpdateTask - Failure Nonexistent ParentId ---");
     
     // Create a test task
-    const testTask = addTask({
+    const testTask = registerTestTask(addTask({
         name: "Test Task for Nonexistent Parent",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testTask) {
         Logger.log("❌ Failed to create test task");
@@ -1027,10 +1035,10 @@ function testUpdateTask_Failure_CircularReference() {
     Logger.log("\n--- Test: UpdateTask - Failure Circular Reference ---");
     
     // Create a parent task
-    const parentTask = addTask({
+    const parentTask = registerTestTask(addTask({
         name: "Parent Task for Circular Test",
         expectTimeSpent: 20
-    });
+    }));
     
     if (!parentTask) {
         Logger.log("❌ Failed to create parent task");
@@ -1038,11 +1046,11 @@ function testUpdateTask_Failure_CircularReference() {
     }
     
     // Create a child task
-    const childTask = addTask({
+    const childTask = registerTestTask(addTask({
         name: "Child Task for Circular Test",
         expectTimeSpent: 10,
         parentId: parentTask.taskId
-    });
+    }));
     
     if (!childTask) {
         Logger.log("❌ Failed to create child task");
@@ -1063,10 +1071,10 @@ function testUpdateTask_Failure_CircularReference_WithProject() {
     Logger.log("\n--- Test: UpdateTask - Failure Circular Reference With Project ---");
     
     // Create a parent task
-    const parentTask = addTask({
+    const parentTask = registerTestTask(addTask({
         name: "Parent Task for Project Circular Test",
         expectTimeSpent: 20
-    });
+    }));
     
     if (!parentTask) {
         Logger.log("❌ Failed to create parent task");
@@ -1074,11 +1082,11 @@ function testUpdateTask_Failure_CircularReference_WithProject() {
     }
     
     // Create a project under the task
-    const project = addProject({
+    const project = registerTestProject(addProject({
         name: "Project for Circular Test",
         expectTimeSpent: 10,
         parentId: parentTask.taskId
-    });
+    }));
     
     if (!project) {
         Logger.log("❌ Failed to create project");
@@ -1086,11 +1094,11 @@ function testUpdateTask_Failure_CircularReference_WithProject() {
     }
     
     // Create a child task under the project
-    const childTask = addTask({
+    const childTask = registerTestTask(addTask({
         name: "Child Task for Project Circular Test",
         expectTimeSpent: 5,
         parentId: project.projectId
-    });
+    }));
     
     if (!childTask) {
         Logger.log("❌ Failed to create child task");
@@ -1116,10 +1124,10 @@ function testDeleteTask_Success_Basic() {
     Logger.log("\n--- Test: DeleteTask - Success Basic ---");
     
     // Create a test task
-    const testTask = addTask({
+    const testTask = registerTestTask(addTask({
         name: "Test Task for Delete",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testTask) {
         Logger.log("❌ Failed to create test task");
@@ -1143,10 +1151,10 @@ function testDeleteTask_Success_WithChildren() {
     Logger.log("\n--- Test: DeleteTask - Success With Children ---");
     
     // Create a parent task
-    const parentTask = addTask({
+    const parentTask = registerTestTask(addTask({
         name: "Parent Task for Delete",
         expectTimeSpent: 20
-    });
+    }));
     
     if (!parentTask) {
         Logger.log("❌ Failed to create parent task");
@@ -1154,39 +1162,39 @@ function testDeleteTask_Success_WithChildren() {
     }
     
     // Create two direct child tasks under the parent
-    const childTask1 = addTask({
+    const childTask1 = registerTestTask(addTask({
         name: "Child Task 1",
         expectTimeSpent: 10,
         parentId: parentTask.taskId
-    });
+    }));
     
-    const childTask2 = addTask({
+    const childTask2 = registerTestTask(addTask({
         name: "Child Task 2",
         expectTimeSpent: 15,
         parentId: parentTask.taskId
-    });
+    }));
     
     // Create events for the parent and children
-    const parentEvent = addCalendarEvent({
+    const parentEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Parent Event",
         eventStart: new Date(),
         eventEnd: new Date(Date.now() + 3600000),
         parentId: parentTask.taskId
-    });
+    }));
     
-    const childEvent1 = addCalendarEvent({
+    const childEvent1 = registerTestCalendarEvent(addCalendarEvent({
         name: "Child Event 1",
         eventStart: new Date(),
         eventEnd: new Date(Date.now() + 3600000),
         parentId: childTask1.taskId
-    });
+    }));
     
-    const childEvent2 = addCalendarEvent({
+    const childEvent2 = registerTestCalendarEvent(addCalendarEvent({
         name: "Child Event 2",
         eventStart: new Date(),
         eventEnd: new Date(Date.now() + 3600000),
         parentId: childTask2.taskId
-    });
+    }));
     
     // Delete the parent task
     const result = deleteTask(parentTask.taskId);
@@ -1233,10 +1241,10 @@ function testRemoveTask_Success_Basic() {
     Logger.log("\n--- Test: RemoveTask - Success Basic ---");
     
     // Create a test task
-    const testTask = addTask({
+    const testTask = registerTestTask(addTask({
         name: "Test Task for Remove",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testTask) {
         Logger.log("❌ Failed to create test task");
@@ -1260,10 +1268,10 @@ function testRemoveTask_Success_WithChildren() {
     Logger.log("\n--- Test: RemoveTask - Success With Children ---");
     
     // Create a parent task
-    const parentTask = addTask({
+    const parentTask = registerTestTask(addTask({
         name: "Parent Task for Remove",
         expectTimeSpent: 20
-    });
+    }));
     
     if (!parentTask) {
         Logger.log("❌ Failed to create parent task");
@@ -1271,17 +1279,17 @@ function testRemoveTask_Success_WithChildren() {
     }
     
     // Create child tasks
-    const childTask1 = addTask({
+    const childTask1 = registerTestTask(addTask({
         name: "Child Task 1",
         expectTimeSpent: 10,
         parentId: parentTask.taskId
-    });
+    }));
     
-    const childTask2 = addTask({
+    const childTask2 = registerTestTask(addTask({
         name: "Child Task 2",
         expectTimeSpent: 15,
         parentId: parentTask.taskId
-    });
+    }));
     
     // Remove the parent task
     const result = removeTask(parentTask.taskId);
@@ -1333,10 +1341,10 @@ function testRemoveTaskWithEvents_Success_Basic() {
     Logger.log("\n--- Test: RemoveTaskWithEvents - Success Basic ---");
     
     // Create a test task
-    const testTask = addTask({
+    const testTask = registerTestTask(addTask({
         name: "Test Task for Remove With Events",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testTask) {
         Logger.log("❌ Failed to create test task");
@@ -1344,19 +1352,19 @@ function testRemoveTaskWithEvents_Success_Basic() {
     }
     
     // Create events for the task
-    const event1 = addCalendarEvent({
+    const event1 = registerTestCalendarEvent(addCalendarEvent({
         name: "Event 1",
         eventStart: new Date(),
         eventEnd: new Date(Date.now() + 3600000),
         parentId: testTask.taskId
-    });
+    }));
     
-    const event2 = addCalendarEvent({
+    const event2 = registerTestCalendarEvent(addCalendarEvent({
         name: "Event 2",
         eventStart: new Date(),
         eventEnd: new Date(Date.now() + 7200000),
         parentId: testTask.taskId
-    });
+    }));
     
     // Remove the task with its events
     const result = removeTaskWithEvents(testTask.taskId);
@@ -1376,10 +1384,10 @@ function testRemoveTaskWithEvents_Success_WithChildren() {
     Logger.log("\n--- Test: RemoveTaskWithEvents - Success With Children ---");
     
     // Create a parent task
-    const parentTask = addTask({
+    const parentTask = registerTestTask(addTask({
         name: "Parent Task for Remove With Events",
         expectTimeSpent: 20
-    });
+    }));
     
     if (!parentTask) {
         Logger.log("❌ Failed to create parent task");
@@ -1387,26 +1395,26 @@ function testRemoveTaskWithEvents_Success_WithChildren() {
     }
     
     // Create child task
-    const childTask = addTask({
+    const childTask = registerTestTask(addTask({
         name: "Child Task",
         expectTimeSpent: 10,
         parentId: parentTask.taskId
-    });
+    }));
     
     // Create events for parent and child
-    const parentEvent = addCalendarEvent({
+    const parentEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Parent Event",
         eventStart: new Date(),
         eventEnd: new Date(Date.now() + 3600000),
         parentId: parentTask.taskId
-    });
+    }));
     
-    const childEvent = addCalendarEvent({
+    const childEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Child Event",
         eventStart: new Date(),
         eventEnd: new Date(Date.now() + 3600000),
         parentId: childTask.taskId
-    });
+    }));
     
     // Remove the parent task with its events
     const result = removeTaskWithEvents(parentTask.taskId);

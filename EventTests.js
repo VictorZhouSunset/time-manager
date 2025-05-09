@@ -21,8 +21,10 @@ function runAllAddCalendarEventTests() {
     Logger.log("======== ADDCALENDAREVENT TESTS COMPLETE ========");
     if (allTestsPassed) {
         Logger.log("🎉🎉🎉 ALL ADDCALENDAREVENT TESTS PASSED! 🎉🎉🎉");
+        cleanupTestData();
     } else {
         Logger.log("❌❌❌ SOME ADDCALENDAREVENT TESTS FAILED. Check logs above. ❌❌❌");
+        Logger.log("⚠️ Test data cleanup skipped to preserve failed test context");
     }
     return allTestsPassed;
 }
@@ -44,8 +46,10 @@ function runAllGetCalendarEventTests() {
     Logger.log("======== GETCALENDAREVENT TESTS COMPLETE ========");
     if (allTestsPassed) {
         Logger.log("🎉🎉🎉 ALL GETCALENDAREVENT TESTS PASSED! 🎉🎉🎉");
+        cleanupTestData();
     } else {
         Logger.log("❌❌❌ SOME GETCALENDAREVENT TESTS FAILED. Check logs above. ❌❌❌");
+        Logger.log("⚠️ Test data cleanup skipped to preserve failed test context");
     }
     return allTestsPassed;
 }
@@ -71,8 +75,10 @@ function runAllUpdateCalendarEventTests() {
     Logger.log("======== UPDATECALENDAREVENT TESTS COMPLETE ========");
     if (allTestsPassed) {
         Logger.log("🎉🎉🎉 ALL UPDATECALENDAREVENT TESTS PASSED! 🎉🎉🎉");
+        cleanupTestData();
     } else {
         Logger.log("❌❌❌ SOME UPDATECALENDAREVENT TESTS FAILED. Check logs above. ❌❌❌");
+        Logger.log("⚠️ Test data cleanup skipped to preserve failed test context");
     }
     return allTestsPassed;
 }
@@ -91,8 +97,10 @@ function runAllDeleteCalendarEventTests() {
     Logger.log("======== DELETECALENDAREVENT TESTS COMPLETE ========");
     if (allTestsPassed) {
         Logger.log("🎉🎉🎉 ALL DELETECALENDAREVENT TESTS PASSED! 🎉🎉🎉");
+        cleanupTestData();
     } else {
         Logger.log("❌❌❌ SOME DELETECALENDAREVENT TESTS FAILED. Check logs above. ❌❌❌");
+        Logger.log("⚠️ Test data cleanup skipped to preserve failed test context");
     }
     return allTestsPassed;
 }
@@ -111,7 +119,7 @@ function testAddCalendarEvent_Success_Basic() {
         eventStart: startTime,
         eventEnd: endTime
     };
-    const result = addCalendarEvent(input);
+    const result = registerTestCalendarEvent(addCalendarEvent(input));
     let pass = true;
 
     pass = assertTruthy(result, "Function should return an object") && pass;
@@ -131,10 +139,10 @@ function testAddCalendarEvent_Success_AllFields() {
     Logger.log("\n--- Test: AddCalendarEvent - Success All Fields ---");
     
     // Create a parent project for this test
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Parent for Complete Event", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ Failed to create parent project for test");
@@ -150,7 +158,7 @@ function testAddCalendarEvent_Success_AllFields() {
         eventStart: startTime,
         eventEnd: endTime
     };
-    const result = addCalendarEvent(input);
+    const result = registerTestCalendarEvent(addCalendarEvent(input));
     let pass = true;
 
     pass = assertTruthy(result, "Function should return an object") && pass;
@@ -170,10 +178,10 @@ function testAddCalendarEvent_Success_WithParentId() {
     Logger.log("\n--- Test: AddCalendarEvent - Success With ParentId ---");
     
     // Create a parent task for this test
-    const parentTask = addTask({ 
+    const parentTask = registerTestTask(addTask({ 
         name: "Parent Task for Event", 
         expectTimeSpent: 5 
-    });
+    }));
     
     if (!parentTask) {
         Logger.log("❌ Failed to create parent task for test");
@@ -188,7 +196,7 @@ function testAddCalendarEvent_Success_WithParentId() {
         eventEnd: endTime,
         parentId: parentTask.taskId
     };
-    const result = addCalendarEvent(input);
+    const result = registerTestCalendarEvent(addCalendarEvent(input));
     let pass = true;
     pass = assertTruthy(result, "Function should return an object") && pass;
     if (result) {
@@ -205,7 +213,7 @@ function testAddCalendarEvent_Failure_MissingName() {
         eventStart: startTime,
         eventEnd: endTime
     };
-    const result = addCalendarEvent(input);
+    const result = registerTestCalendarEvent(addCalendarEvent(input));
     return assertNull(result, "Function should return null when name is missing");
 }
 
@@ -216,7 +224,7 @@ function testAddCalendarEvent_Failure_MissingStartTime() {
         name: "Missing Start",
         eventEnd: endTime
     };
-    const result = addCalendarEvent(input);
+    const result = registerTestCalendarEvent(addCalendarEvent(input));
     return assertNull(result, "Function should return null when eventStart is missing");
 }
 
@@ -227,7 +235,7 @@ function testAddCalendarEvent_Failure_MissingEndTime() {
         name: "Missing End",
         eventStart: startTime
     };
-    const result = addCalendarEvent(input);
+    const result = registerTestCalendarEvent(addCalendarEvent(input));
     return assertNull(result, "Function should return null when eventEnd is missing");
 }
 
@@ -239,7 +247,7 @@ function testAddCalendarEvent_Success_EndEqualStart() {
         eventStart: startTime,
         eventEnd: startTime
     };
-    const result = addCalendarEvent(input);
+    const result = registerTestCalendarEvent(addCalendarEvent(input));
     let pass = true;
     pass = assertTruthy(result, "Function should return an object") && pass;
     if (result) {
@@ -259,7 +267,7 @@ function testAddCalendarEvent_Failure_EndBeforeStart() {
         eventStart: startTime,
         eventEnd: endTime
     };
-    const result = addCalendarEvent(input);
+    const result = registerTestCalendarEvent(addCalendarEvent(input));
     return assertNull(result, "Function should return null when end time is before start time");
 }
 
@@ -273,7 +281,7 @@ function testAddCalendarEvent_Failure_InvalidParentIdType() {
         eventEnd: endTime,
         parentId: 12345
     };
-    const result = addCalendarEvent(input);
+    const result = registerTestCalendarEvent(addCalendarEvent(input));
     return assertNull(result, "Function should return null for non-string parentId if provided");
 }
 
@@ -287,7 +295,7 @@ function testAddCalendarEvent_Failure_EmptyParentIdString() {
         eventEnd: endTime,
         parentId: "  "
     };
-    const result = addCalendarEvent(input);
+    const result = registerTestCalendarEvent(addCalendarEvent(input));
     return assertNull(result, "Function should return null for empty string parentId if provided");
 }
 
@@ -301,7 +309,7 @@ function testAddCalendarEvent_Failure_NonexistentParentId() {
         eventEnd: endTime,
         parentId: "P-DOES-NOT-EXIST-" + Utilities.getUuid()
     };
-    const result = addCalendarEvent(input);
+    const result = registerTestCalendarEvent(addCalendarEvent(input));
     return assertNull(result, "Function should return null for nonexistent parentId");
 }
 
@@ -315,7 +323,7 @@ function testAddCalendarEvent_Warning_InvalidDescriptionType() {
         eventEnd: endTime,
         description: 123
     };
-    const result = addCalendarEvent(input);
+    const result = registerTestCalendarEvent(addCalendarEvent(input));
     let pass = true;
     pass = assertTruthy(result, "Function should still create event") && pass;
     if (result) {
@@ -335,19 +343,19 @@ function testGetAllCalendarEvents_Success_Basic() {
     // Setup: Add a few test events
     const startTime1 = new Date();
     const endTime1 = new Date(startTime1.getTime() + (1 * 60 * 60 * 1000));
-    const event1 = addCalendarEvent({ 
+    const event1 = registerTestCalendarEvent(addCalendarEvent({ 
         name: "Test Event 1", 
         eventStart: startTime1, 
         eventEnd: endTime1 
-    });
+    }));
     
     const startTime2 = new Date();
     const endTime2 = new Date(startTime2.getTime() + (2 * 60 * 60 * 1000));
-    const event2 = addCalendarEvent({ 
+    const event2 = registerTestCalendarEvent(addCalendarEvent({ 
         name: "Test Event 2", 
         eventStart: startTime2, 
         eventEnd: endTime2 
-    });
+    }));
     
     // Execute
     const allEvents = getAllEvents();
@@ -372,12 +380,12 @@ function testGetCalendarEventById_Success_Basic() {
     // Setup: Add a test event
     const startTime = new Date();
     const endTime = new Date(startTime.getTime() + (1.5 * 60 * 60 * 1000));
-    const testEvent = addCalendarEvent({ 
+    const testEvent = registerTestCalendarEvent(addCalendarEvent({ 
         name: "Find Me Event", 
         description: "This event should be findable by ID",
         eventStart: startTime, 
         eventEnd: endTime 
-    });
+    }));
     
     // Execute
     const foundEvent = getEventById(testEvent.eventId);
@@ -431,10 +439,10 @@ function testGetCalendarEventsByParentId_Success_Basic() {
     Logger.log("\n--- Test: GetEventsByParentId - Success ---");
     
     // Create a parent project first instead of using a hardcoded ID
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Parent Project for Events Test", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ FAIL: Could not create test parent project for GetEventsByParentId test");
@@ -443,30 +451,30 @@ function testGetCalendarEventsByParentId_Success_Basic() {
     
     const startTime1 = new Date();
     const endTime1 = new Date(startTime1.getTime() + (1 * 60 * 60 * 1000));
-    const childEvent1 = addCalendarEvent({ 
+    const childEvent1 = registerTestCalendarEvent(addCalendarEvent({ 
         name: "Child Event 1", 
         eventStart: startTime1, 
         eventEnd: endTime1,
         parentId: parentProject.projectId
-    });
+    }));
     
     const startTime2 = new Date();
     const endTime2 = new Date(startTime2.getTime() + (2 * 60 * 60 * 1000));
-    const childEvent2 = addCalendarEvent({ 
+    const childEvent2 = registerTestCalendarEvent(addCalendarEvent({ 
         name: "Child Event 2", 
         eventStart: startTime2, 
         eventEnd: endTime2,
         parentId: parentProject.projectId
-    });
+    }));
     
     // Add an unrelated event
     const startTime3 = new Date();
     const endTime3 = new Date(startTime3.getTime() + (1 * 60 * 60 * 1000));
-    const unrelatedEvent = addCalendarEvent({ 
+    const unrelatedEvent = registerTestCalendarEvent(addCalendarEvent({ 
         name: "Unrelated Event", 
         eventStart: startTime3, 
         eventEnd: endTime3
-    });
+    }));
     
     if (!childEvent1 || !childEvent2 || !unrelatedEvent) {
         Logger.log("❌ FAIL: Could not create test events for GetEventsByParentId test");
@@ -497,10 +505,10 @@ function testGetCalendarEventsByParentId_Success_NoChildren() {
     Logger.log("\n--- Test: GetEventsByParentId - No Children ---");
     
     // Create a parent project with no events
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Parent Project with No Events", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ FAIL: Could not create test parent project for NoChildren test");
@@ -529,11 +537,11 @@ function testUpdateCalendarEvent_Success_Basic() {
     // Create a test event
     const startTime = new Date();
     const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
-    const testEvent = addCalendarEvent({
+    const testEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Test Event for Update",
         eventStart: startTime,
         eventEnd: endTime
-    });
+    }));
     
     if (!testEvent) {
         Logger.log("❌ Failed to create test event");
@@ -561,10 +569,10 @@ function testUpdateCalendarEvent_Success_AllFields() {
     Logger.log("\n--- Test: UpdateCalendarEvent - Success All Fields ---");
     
     // Create a parent project for this test
-    const parentProject = addProject({
+    const parentProject = registerTestProject(addProject({
         name: "Parent for Event Update",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ Failed to create parent project");
@@ -574,11 +582,11 @@ function testUpdateCalendarEvent_Success_AllFields() {
     // Create a test event
     const startTime = new Date();
     const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
-    const testEvent = addCalendarEvent({
+    const testEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Test Event for Full Update",
         eventStart: startTime,
         eventEnd: endTime
-    });
+    }));
     
     if (!testEvent) {
         Logger.log("❌ Failed to create test event");
@@ -617,12 +625,12 @@ function testUpdateCalendarEvent_Success_PartialUpdate() {
     // Create a test event with all fields
     const startTime = new Date();
     const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
-    const testEvent = addCalendarEvent({
+    const testEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Test Event for Partial Update",
         description: "Original description",
         eventStart: startTime,
         eventEnd: endTime
-    });
+    }));
     
     if (!testEvent) {
         Logger.log("❌ Failed to create test event");
@@ -652,14 +660,14 @@ function testUpdateCalendarEvent_Success_UpdateParentId() {
     Logger.log("\n--- Test: UpdateCalendarEvent - Success Update ParentId ---");
     
     // Create two parent projects
-    const parent1 = addProject({
+    const parent1 = registerTestProject(addProject({
         name: "Parent 1 for Event",
         expectTimeSpent: 10
-    });
-    const parent2 = addProject({
+    }));
+    const parent2 = registerTestProject(addProject({
         name: "Parent 2 for Event",
         expectTimeSpent: 15
-    });
+    }));
     
     if (!parent1 || !parent2) {
         Logger.log("❌ Failed to create parent projects");
@@ -669,12 +677,12 @@ function testUpdateCalendarEvent_Success_UpdateParentId() {
     // Create a test event with first parent
     const startTime = new Date();
     const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
-    const testEvent = addCalendarEvent({
+    const testEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Test Event for Parent Update",
         eventStart: startTime,
         eventEnd: endTime,
         parentId: parent1.projectId
-    });
+    }));
     
     if (!testEvent) {
         Logger.log("❌ Failed to create test event");
@@ -703,11 +711,11 @@ function testUpdateCalendarEvent_Success_EndEqualStart() {
     // Create a test event
     const startTime = new Date();
     const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
-    const testEvent = addCalendarEvent({
+    const testEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Test Event for Equal Times",
         eventStart: startTime,
         eventEnd: endTime
-    });
+    }));
     
     if (!testEvent) {
         Logger.log("❌ Failed to create test event");
@@ -757,11 +765,11 @@ function testUpdateCalendarEvent_Failure_InvalidUpdateData() {
     // Create a test event
     const startTime = new Date();
     const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
-    const testEvent = addCalendarEvent({
+    const testEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Test Event for Invalid Update",
         eventStart: startTime,
         eventEnd: endTime
-    });
+    }));
     
     if (!testEvent) {
         Logger.log("❌ Failed to create test event");
@@ -779,11 +787,11 @@ function testUpdateCalendarEvent_Failure_EndBeforeStart() {
     // Create a test event
     const startTime = new Date();
     const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
-    const testEvent = addCalendarEvent({
+    const testEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Test Event for Invalid Times",
         eventStart: startTime,
         eventEnd: endTime
-    });
+    }));
     
     if (!testEvent) {
         Logger.log("❌ Failed to create test event");
@@ -809,11 +817,11 @@ function testUpdateCalendarEvent_Failure_InvalidParentId() {
     // Create a test event
     const startTime = new Date();
     const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
-    const testEvent = addCalendarEvent({
+    const testEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Test Event for Invalid Parent",
         eventStart: startTime,
         eventEnd: endTime
-    });
+    }));
     
     if (!testEvent) {
         Logger.log("❌ Failed to create test event");
@@ -836,11 +844,11 @@ function testUpdateCalendarEvent_Failure_NonexistentParentId() {
     // Create a test event
     const startTime = new Date();
     const endTime = new Date(startTime.getTime() + (2 * 60 * 60 * 1000));
-    const testEvent = addCalendarEvent({
+    const testEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Test Event for Nonexistent Parent",
         eventStart: startTime,
         eventEnd: endTime
-    });
+    }));
     
     if (!testEvent) {
         Logger.log("❌ Failed to create test event");
@@ -866,11 +874,11 @@ function testDeleteCalendarEvent_Success_Basic() {
     Logger.log("\n--- Test: DeleteEvent - Success Basic ---");
     
     // Create a test event
-    const testEvent = addCalendarEvent({
+    const testEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Test Event for Delete",
         eventStart: new Date(),
         eventEnd: new Date(Date.now() + 3600000) // 1 hour later
-    });
+    }));
     
     if (!testEvent) {
         Logger.log("❌ Failed to create test event");

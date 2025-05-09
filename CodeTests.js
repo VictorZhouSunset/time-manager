@@ -18,8 +18,11 @@ function runAllGetChildrenAndDescendantsTests() {
     Logger.log("======== CODE TESTS COMPLETE ========");
     if (allTestsPassed) {
         Logger.log("🎉🎉🎉 ALL CODE TESTS PASSED! 🎉🎉🎉");
+        // Clean up test data only if all tests passed
+        cleanupTestData();
     } else {
         Logger.log("❌❌❌ SOME CODE TESTS FAILED. Check logs above. ❌❌❌");
+        Logger.log("⚠️ Test data cleanup skipped to preserve failed test context");
     }
     return allTestsPassed;
 }
@@ -34,10 +37,10 @@ function testGetChildrenByParentId_Success_NoChildren() {
     Logger.log("\n--- Test: GetChildrenByParentId - Success No Children ---");
     
     // Create an empty parent project with no children
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Parent Project with No Children", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("  ❌ FAIL: Failed to create test parent project");
@@ -67,26 +70,26 @@ function testGetChildrenByParentId_Success_OnlyTasks() {
     Logger.log("\n--- Test: GetChildrenByParentId - Success Only Tasks ---");
     
     // Create a parent project for tasks
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Parent Project for Tasks Only", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("  ❌ FAIL: Failed to create test parent project");
         return false;
     }
     
-    const task1 = addTask({ 
+    const task1 = registerTestTask(addTask({ 
         name: "Child Task 1 for OnlyTasks", 
         parentId: parentProject.projectId, 
         expectTimeSpent: 1 
-    });
-    const task2 = addTask({ 
+    }));
+    const task2 = registerTestTask(addTask({ 
         name: "Child Task 2 for OnlyTasks", 
         parentId: parentProject.projectId, 
         expectTimeSpent: 2 
-    });
+    }));
 
     let pass = true;
     if (!task1 || !task2) {
@@ -130,26 +133,26 @@ function testGetChildrenByParentId_Success_OnlyProjects() {
     Logger.log("\n--- Test: GetChildrenByParentId - Success Only Projects ---");
     
     // Create a parent project for child projects
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Parent Project for Projects Only", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("  ❌ FAIL: Failed to create test parent project");
         return false;
     }
     
-    const project1 = addProject({ 
+    const project1 = registerTestProject(addProject({ 
         name: "Child Project 1 for OnlyProjects", 
         parentId: parentProject.projectId, 
         expectTimeSpent: 1 
-    });
-    const project2 = addProject({ 
+    }));
+    const project2 = registerTestProject(addProject({ 
         name: "Child Project 2 for OnlyProjects", 
         parentId: parentProject.projectId, 
         expectTimeSpent: 2 
-    });
+    }));
 
     let pass = true;
     if (!project1 || !project2) {
@@ -193,26 +196,26 @@ function testGetChildrenByParentId_Success_MixedChildren() {
     Logger.log("\n--- Test: GetChildrenByParentId - Success Mixed Children ---");
     
     // Create a parent project for mixed children
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Parent Project for Mixed Children", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("  ❌ FAIL: Failed to create test parent project");
         return false;
     }
     
-    const testProject = addProject({
+    const testProject = registerTestProject(addProject({
         name: "Test Child Project",
         parentId: parentProject.projectId,
         expectTimeSpent: 1
-    });
-    const testTask = addTask({
+    }));
+    const testTask = registerTestTask(addTask({
         name: "Test Child Task",
         parentId: parentProject.projectId,
         expectTimeSpent: 1
-    });
+    }));
 
     let pass = true;
     if (!testProject || !testTask) {
@@ -275,11 +278,11 @@ function testGetAllDescendantsByParentId_Success_NoDescendants() {
     Logger.log("\n--- Test: GetAllDescendantsByParentId - Success No Descendants ---");
     
     // Create a parent project with no descendants
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Parent With No Kids", 
         parentId: null, 
         expectTimeSpent: 1 
-    });
+    }));
     
     let pass = true;
     if (!parentProject) {
@@ -309,26 +312,26 @@ function testGetAllDescendantsByParentId_Success_OneLevelDeep() {
     Logger.log("\n--- Test: GetAllDescendantsByParentId - Success One Level Deep ---");
     
     // Create a parent project for one level of descendants
-    const parentProject = addProject({ 
+    const parentProject = registerTestProject(addProject({ 
         name: "Parent Project for One Level", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("  ❌ FAIL: Failed to create test parent project");
         return false;
     }
     
-    const childProject = addProject({ 
+    const childProject = registerTestProject(addProject({ 
         name: "Child Project OneLevel", 
         parentId: parentProject.projectId, 
         expectTimeSpent: 1 
-    });
-    const childTask = addTask({ 
+    }));
+    const childTask = registerTestTask(addTask({ 
         name: "Child Task OneLevel", 
         parentId: parentProject.projectId, 
         expectTimeSpent: 1 
-    });
+    }));
 
     let pass = true;
     if (!childProject || !childTask) {
@@ -380,10 +383,10 @@ function testGetAllDescendantsByParentId_Success_MultiLevelDeep() {
     //       └── grandchild3 (task)
 
     // Create the root project
-    const rootProject = addProject({ 
+    const rootProject = registerTestProject(addProject({ 
         name: "Root Project for Multi-Level", 
         expectTimeSpent: 10 
-    });
+    }));
     
     if (!rootProject) {
         Logger.log("  ❌ FAIL: Failed to create root project");
@@ -391,16 +394,16 @@ function testGetAllDescendantsByParentId_Success_MultiLevelDeep() {
     }
     
     // Level 1
-    const child1 = addProject({
+    const child1 = registerTestProject(addProject({
         name: "Child Project 1",
         parentId: rootProject.projectId,
         expectTimeSpent: 1
-    });
-    const child2 = addTask({
+    }));
+    const child2 = registerTestTask(addTask({
         name: "Child Task 2",
         parentId: rootProject.projectId,
         expectTimeSpent: 1
-    });
+    }));
 
     if (!child1 || !child2) {
         Logger.log("  ❌ FAIL: Failed to create level 1 children");
@@ -408,21 +411,21 @@ function testGetAllDescendantsByParentId_Success_MultiLevelDeep() {
     }
 
     // Level 2
-    const grandchild1 = addTask({
+    const grandchild1 = registerTestTask(addTask({
         name: "Grandchild Task 1",
         parentId: child1.projectId,
         expectTimeSpent: 1
-    });
-    const grandchild2 = addProject({
+    }));
+    const grandchild2 = registerTestProject(addProject({
         name: "Grandchild Project 2",
         parentId: child1.projectId,
         expectTimeSpent: 1
-    });
-    const grandchild3 = addTask({
+    }));
+    const grandchild3 = registerTestTask(addTask({
         name: "Grandchild Task 3",
         parentId: child2.taskId,
         expectTimeSpent: 1
-    });
+    }));
 
     if (!grandchild1 || !grandchild2 || !grandchild3) {
         Logger.log("  ❌ FAIL: Failed to create level 2 grandchildren");

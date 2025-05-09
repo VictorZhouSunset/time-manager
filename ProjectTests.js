@@ -24,8 +24,10 @@ function runAllAddProjectTests() {
     Logger.log("======== ADDPROJECT TESTS COMPLETE ========");
     if (allTestsPassed) {
         Logger.log("🎉🎉🎉 ALL ADDPROJECT TESTS PASSED! 🎉🎉🎉");
+        cleanupTestData();
     } else {
         Logger.log("❌❌❌ SOME ADDPROJECT TESTS FAILED. Check logs above. ❌❌❌");
+        Logger.log("⚠️ Test data cleanup skipped to preserve failed test context");
     }
     return allTestsPassed;
 }
@@ -51,8 +53,10 @@ function runAllGetProjectTests() {
     Logger.log("======== GETPROJECT TESTS COMPLETE ========");
     if (allTestsPassed) {
         Logger.log("🎉🎉🎉 ALL GETPROJECT TESTS PASSED! 🎉🎉🎉");
+        cleanupTestData();
     } else {
         Logger.log("❌❌❌ SOME GETPROJECT TESTS FAILED. Check logs above. ❌❌❌");
+        Logger.log("⚠️ Test data cleanup skipped to preserve failed test context");
     }
     return allTestsPassed;
 }
@@ -81,8 +85,10 @@ function runAllUpdateProjectTests() {
     Logger.log("======== UPDATEPROJECT TESTS COMPLETE ========");
     if (allTestsPassed) {
         Logger.log("🎉🎉🎉 ALL UPDATEPROJECT TESTS PASSED! 🎉🎉🎉");
+        cleanupTestData();
     } else {
         Logger.log("❌❌❌ SOME UPDATEPROJECT TESTS FAILED. Check logs above. ❌❌❌");
+        Logger.log("⚠️ Test data cleanup skipped to preserve failed test context");
     }
     return allTestsPassed;
 }
@@ -119,8 +125,10 @@ function runAllDeleteProjectTests() {
     Logger.log("======== DELETEPROJECT TESTS COMPLETE ========");
     if (allTestsPassed) {
         Logger.log("🎉🎉🎉 ALL DELETEPROJECT TESTS PASSED! 🎉🎉🎉");
+        cleanupTestData();
     } else {
         Logger.log("❌❌❌ SOME DELETEPROJECT TESTS FAILED. Check logs above. ❌❌❌");
+        Logger.log("⚠️ Test data cleanup skipped to preserve failed test context");
     }
     return allTestsPassed;
 }
@@ -133,7 +141,7 @@ function runAllDeleteProjectTests() {
 function testAddProject_Success_Basic() {
     Logger.log("\n--- Test: AddProject - Success Basic ---");
     const input = { name: "Basic Project", expectTimeSpent: 10 };
-    const result = addProject(input);
+    const result = registerTestProject(addProject(input));
     let pass = true;
 
     pass = assertTruthy(result, "Function should return an object") && pass;
@@ -154,7 +162,7 @@ function testAddProject_Success_AllFields() {
     Logger.log("\n--- Test: AddProject - Success All Fields ---");
     
     // First create a parent project
-    const parentProject = addProject({ name: "Parent for Complete Project", expectTimeSpent: 10 });
+    const parentProject = registerTestProject(addProject({ name: "Parent for Complete Project", expectTimeSpent: 10 }));
     
     const input = {
         name: "Complete Project",
@@ -164,7 +172,7 @@ function testAddProject_Success_AllFields() {
         expectTimeSpent: 25,
         totalTimeSpent: 5.5
     };
-    const result = addProject(input);
+    const result = registerTestProject(addProject(input));
     let pass = true;
 
     pass = assertTruthy(result, "Function should return an object") && pass;
@@ -185,11 +193,11 @@ function testAddProject_Success_WithParentId() {
     Logger.log("\n--- Test: AddProject - Success With ParentId ---");
     
     // First create a parent project
-    const parentProject = addProject({ name: "Parent Project", expectTimeSpent: 10 });
+    const parentProject = registerTestProject(addProject({ name: "Parent Project", expectTimeSpent: 10 }));
     
     // Then create a child project referencing the parent
     const input = { name: "Child Project", expectTimeSpent: 5, parentId: parentProject.projectId };
-    const result = addProject(input);
+    const result = registerTestProject(addProject(input));
     
     let pass = true;
     pass = assertTruthy(result, "Function should return an object") && pass;
@@ -202,7 +210,7 @@ function testAddProject_Success_WithParentId() {
 function testAddProject_Success_SpecificStatusAndTime() {
     Logger.log("\n--- Test: AddProject - Success Specific Status & Time ---");
     const input = { name: "Ongoing Task", expectTimeSpent: 12, status: "Paused", totalTimeSpent: 3 };
-    const result = addProject(input);
+    const result = registerTestProject(addProject(input));
     let pass = true;
     pass = assertTruthy(result, "Function should return an object") && pass;
     if (result) {
@@ -215,7 +223,7 @@ function testAddProject_Success_SpecificStatusAndTime() {
 function testAddProject_Success_ZeroTimes() {
     Logger.log("\n--- Test: AddProject - Success Zero Times ---");
     const input = { name: "Zero Time Project", expectTimeSpent: 0, totalTimeSpent: 0 };
-    const result = addProject(input);
+    const result = registerTestProject(addProject(input));
     let pass = true;
     pass = assertTruthy(result, "Function should return an object") && pass;
     if (result) {
@@ -229,28 +237,28 @@ function testAddProject_Success_ZeroTimes() {
 function testAddProject_Failure_MissingName() {
     Logger.log("\n--- Test: AddProject - Failure Missing Name ---");
     const input = { expectTimeSpent: 10 };
-    const result = addProject(input);
+    const result = registerTestProject(addProject(input));
     return assertNull(result, "Function should return null when name is missing");
 }
 
 function testAddProject_Failure_MissingExpectTime() {
     Logger.log("\n--- Test: AddProject - Failure Missing expectTimeSpent ---");
     const input = { name: "Project No Time" };
-    const result = addProject(input);
+    const result = registerTestProject(addProject(input));
     return assertNull(result, "Function should return null when expectTimeSpent is missing");
 }
 
 function testAddProject_Failure_NegativeExpectTime() {
     Logger.log("\n--- Test: AddProject - Failure Negative expectTimeSpent ---");
     const input = { name: "Bad Time Project", expectTimeSpent: -5 };
-    const result = addProject(input);
+    const result = registerTestProject(addProject(input));
     return assertNull(result, "Function should return null for negative expectTimeSpent");
 }
 
 function testAddProject_Warning_InvalidDescriptionType() {
     Logger.log("\n--- Test: AddProject - Warning Invalid Description Type (should default) ---");
     const input = { name: "Desc Type Test", expectTimeSpent: 5, description: 123 };
-    const result = addProject(input);
+    const result = registerTestProject(addProject(input));
     let pass = true;
     pass = assertTruthy(result, "Function should still create project") && pass;
     if (result) {
@@ -263,7 +271,7 @@ function testAddProject_Warning_InvalidDescriptionType() {
 function testAddProject_Warning_InvalidStatus() {
     Logger.log("\n--- Test: AddProject - Warning Invalid Status (should default) ---");
     const input = { name: "Status Test", expectTimeSpent: 5, status: "Super Fun Status" };
-    const result = addProject(input);
+    const result = registerTestProject(addProject(input));
     let pass = true;
     pass = assertTruthy(result, "Function should still create project") && pass;
     if (result) {
@@ -276,7 +284,7 @@ function testAddProject_Warning_InvalidStatus() {
 function testAddProject_Warning_InvalidTotalTimeType() {
     Logger.log("\n--- Test: AddProject - Warning Invalid totalTimeSpent Type (should default) ---");
     const input = { name: "Total Time Type Test", expectTimeSpent: 5, totalTimeSpent: "five hours" };
-    const result = addProject(input);
+    const result = registerTestProject(addProject(input));
     let pass = true;
     pass = assertTruthy(result, "Function should still create project") && pass;
     if (result) {
@@ -289,7 +297,7 @@ function testAddProject_Warning_InvalidTotalTimeType() {
 function testAddProject_Warning_NegativeTotalTime() {
     Logger.log("\n--- Test: AddProject - Warning Negative totalTimeSpent (should default or error) ---");
     const input = { name: "Negative Total Time", expectTimeSpent: 5, totalTimeSpent: -10 };
-    const result = addProject(input); // Your current code defaults this to 0 after logging a warning.
+    const result = registerTestProject(addProject(input)); // Your current code defaults this to 0 after logging a warning.
                                      // If you change addProject to return null for this, this test needs to change.
     let pass = true;
     pass = assertTruthy(result, "Function should still create project (or fail if you made it stricter)") && pass;
@@ -302,7 +310,7 @@ function testAddProject_Warning_NegativeTotalTime() {
 function testAddProject_Failure_InvalidParentIdType() {
     Logger.log("\n--- Test: AddProject - Failure Invalid ParentId Type ---");
     const input = { name: "ParentId Type Test", expectTimeSpent: 5, parentId: 12345 };
-    const result = addProject(input);
+    const result = registerTestProject(addProject(input));
     // Your addProject function (from previous context) returns null if parentId is provided but not a string.
     return assertNull(result, "Function should return null for non-string parentId");
 }
@@ -310,7 +318,7 @@ function testAddProject_Failure_InvalidParentIdType() {
 function testAddProject_Failure_EmptyParentIdString() {
     Logger.log("\n--- Test: AddProject - Failure Empty ParentId String (if provided) ---");
     const input = { name: "Empty ParentId Project", expectTimeSpent: 5, parentId: "  " }; // parentId is an empty/whitespace string
-    const result = addProject(input);
+    const result = registerTestProject(addProject(input));
     // This test expects addProject to fail if parentId IS PROVIDED and is an empty string
     return assertNull(result, "Function should return null for empty string parentId if provided");
 }
@@ -318,7 +326,7 @@ function testAddProject_Failure_EmptyParentIdString() {
 function testAddProject_Failure_NonexistentParentId() {
     Logger.log("\n--- Test: AddProject - Failure Nonexistent ParentId ---");
     const input = { name: "Nonexistent Parent Project", expectTimeSpent: 5, parentId: "P-DOES-NOT-EXIST-" + Utilities.getUuid() };
-    const result = addProject(input);
+    const result = registerTestProject(addProject(input));
     // This test expects addProject to fail if parentId doesn't exist in the database
     return assertNull(result, "Function should return null for nonexistent parentId");
 }
@@ -331,8 +339,8 @@ function testGetAllProjects_Success_Basic() {
     Logger.log("\n--- Test: GetAllProjects - Success ---");
     
     // Setup: Add a few test projects
-    const project1 = addProject({ name: "Test Project 1", expectTimeSpent: 10 });
-    const project2 = addProject({ name: "Test Project 2", expectTimeSpent: 20 });
+    const project1 = registerTestProject(addProject({ name: "Test Project 1", expectTimeSpent: 10 }));
+    const project2 = registerTestProject(addProject({ name: "Test Project 2", expectTimeSpent: 20 }));
     
     // Execute
     const allProjects = getAllProjects();
@@ -355,11 +363,11 @@ function testGetProjectById_Success_Basic() {
     Logger.log("\n--- Test: GetProjectById - Success ---");
     
     // Setup: Add a test project
-    const testProject = addProject({ 
+    const testProject = registerTestProject(addProject({ 
         name: "Find Me Project", 
         description: "This project should be findable by ID",
         expectTimeSpent: 15 
-    });
+    }));
     
     // Execute
     const foundProject = getProjectById(testProject.projectId);
@@ -412,19 +420,19 @@ function testGetProjectsByParentId_Success_Basic() {
     Logger.log("\n--- Test: GetProjectsByParentId - Success ---");
     
     // Setup: Create a parent project and child projects
-    const parentProject = addProject({ name: "Parent Project", expectTimeSpent: 30 });
-    const childProject1 = addProject({ 
+    const parentProject = registerTestProject(addProject({ name: "Parent Project", expectTimeSpent: 30 }));
+    const childProject1 = registerTestProject(addProject({ 
         name: "Child Project 1", 
         expectTimeSpent: 10,
         parentId: parentProject.projectId
-    });
-    const childProject2 = addProject({ 
+    }));
+    const childProject2 = registerTestProject(addProject({ 
         name: "Child Project 2", 
         expectTimeSpent: 15,
         parentId: parentProject.projectId
-    });
+    }));
     // Add an unrelated project
-    const unrelatedProject = addProject({ name: "Unrelated Project", expectTimeSpent: 5 });
+    const unrelatedProject = registerTestProject(addProject({ name: "Unrelated Project", expectTimeSpent: 5 }));
     
     // Execute
     const childProjects = getProjectsByParentId(parentProject.projectId);
@@ -450,7 +458,7 @@ function testGetProjectsByParentId_Success_NoChildren() {
     Logger.log("\n--- Test: GetProjectsByParentId - No Children ---");
     
     // Setup: Create a project with no children
-    const lonelyProject = addProject({ name: "Lonely Project", expectTimeSpent: 5 });
+    const lonelyProject = registerTestProject(addProject({ name: "Lonely Project", expectTimeSpent: 5 }));
     
     // Execute
     const children = getProjectsByParentId(lonelyProject.projectId);
@@ -467,21 +475,21 @@ function testGetProjectsByStatus_Success_Basic() {
     Logger.log("\n--- Test: GetProjectsByStatus - Success ---");
     
     // Setup: Create projects with different statuses
-    const onTrackProject1 = addProject({ 
+    const onTrackProject1 = registerTestProject(addProject({ 
         name: "On Track Project 1", 
         expectTimeSpent: 10,
         status: "On track"
-    });
-    const onTrackProject2 = addProject({ 
+    }));
+    const onTrackProject2 = registerTestProject(addProject({ 
         name: "On Track Project 2", 
         expectTimeSpent: 15,
         status: "On track"
-    });
-    const delayedProject = addProject({ 
+    }));
+    const delayedProject = registerTestProject(addProject({ 
         name: "Delayed Project", 
         expectTimeSpent: 20,
         status: "Delayed"
-    });
+    }));
     
     // Execute
     const onTrackProjects = getProjectsByStatus("On track");
@@ -543,10 +551,10 @@ function testUpdateProject_Success_Basic() {
     Logger.log("\n--- Test: UpdateProject - Success Basic ---");
     
     // Create a test project
-    const testProject = addProject({
+    const testProject = registerTestProject(addProject({
         name: "Test Project for Update",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testProject) {
         Logger.log("❌ Failed to create test project");
@@ -573,10 +581,10 @@ function testUpdateProject_Success_AllFields() {
     Logger.log("\n--- Test: UpdateProject - Success All Fields ---");
     
     // Create a parent project for this test
-    const parentProject = addProject({
+    const parentProject = registerTestProject(addProject({
         name: "Parent for Project Update",
         expectTimeSpent: 20
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ Failed to create parent project");
@@ -584,10 +592,10 @@ function testUpdateProject_Success_AllFields() {
     }
     
     // Create a test project
-    const testProject = addProject({
+    const testProject = registerTestProject(addProject({
         name: "Test Project for Full Update",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testProject) {
         Logger.log("❌ Failed to create test project");
@@ -624,12 +632,12 @@ function testUpdateProject_Success_PartialUpdate() {
     Logger.log("\n--- Test: UpdateProject - Success Partial Update ---");
     
     // Create a test project with all fields
-    const testProject = addProject({
+    const testProject = registerTestProject(addProject({
         name: "Test Project for Partial Update",
         description: "Original description",
         expectTimeSpent: 10,
         status: "Not yet started"
-    });
+    }));
     
     if (!testProject) {
         Logger.log("❌ Failed to create test project");
@@ -660,14 +668,14 @@ function testUpdateProject_Success_UpdateParentId() {
     Logger.log("\n--- Test: UpdateProject - Success Update ParentId ---");
     
     // Create two parent projects
-    const parent1 = addProject({
+    const parent1 = registerTestProject(addProject({
         name: "Parent 1 for Project",
         expectTimeSpent: 20
-    });
-    const parent2 = addProject({
+    }));
+    const parent2 = registerTestProject(addProject({
         name: "Parent 2 for Project",
         expectTimeSpent: 25
-    });
+    }));
     
     if (!parent1 || !parent2) {
         Logger.log("❌ Failed to create parent projects");
@@ -675,11 +683,11 @@ function testUpdateProject_Success_UpdateParentId() {
     }
     
     // Create a test project with first parent
-    const testProject = addProject({
+    const testProject = registerTestProject(addProject({
         name: "Test Project for Parent Update",
         expectTimeSpent: 10,
         parentId: parent1.projectId
-    });
+    }));
     
     if (!testProject) {
         Logger.log("❌ Failed to create test project");
@@ -706,11 +714,11 @@ function testUpdateProject_Success_ZeroTimes() {
     Logger.log("\n--- Test: UpdateProject - Success Zero Times ---");
     
     // Create a test project
-    const testProject = addProject({
+    const testProject = registerTestProject(addProject({
         name: "Test Project for Zero Times",
         expectTimeSpent: 10,
         totalTimeSpent: 5
-    });
+    }));
     
     if (!testProject) {
         Logger.log("❌ Failed to create test project");
@@ -757,10 +765,10 @@ function testUpdateProject_Failure_InvalidUpdateData() {
     Logger.log("\n--- Test: UpdateProject - Failure Invalid UpdateData ---");
     
     // Create a test project
-    const testProject = addProject({
+    const testProject = registerTestProject(addProject({
         name: "Test Project for Invalid Update",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testProject) {
         Logger.log("❌ Failed to create test project");
@@ -776,10 +784,10 @@ function testUpdateProject_Failure_NegativeExpectTime() {
     Logger.log("\n--- Test: UpdateProject - Failure Negative ExpectTimeSpent ---");
     
     // Create a test project
-    const testProject = addProject({
+    const testProject = registerTestProject(addProject({
         name: "Test Project for Negative Time",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testProject) {
         Logger.log("❌ Failed to create test project");
@@ -799,10 +807,10 @@ function testUpdateProject_Failure_NegativeTotalTime() {
     Logger.log("\n--- Test: UpdateProject - Failure Negative TotalTimeSpent ---");
     
     // Create a test project
-    const testProject = addProject({
+    const testProject = registerTestProject(addProject({
         name: "Test Project for Negative Total Time",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testProject) {
         Logger.log("❌ Failed to create test project");
@@ -822,10 +830,10 @@ function testUpdateProject_Failure_InvalidParentId() {
     Logger.log("\n--- Test: UpdateProject - Failure Invalid ParentId ---");
     
     // Create a test project
-    const testProject = addProject({
+    const testProject = registerTestProject(addProject({
         name: "Test Project for Invalid Parent",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testProject) {
         Logger.log("❌ Failed to create test project");
@@ -845,10 +853,10 @@ function testUpdateProject_Failure_NonexistentParentId() {
     Logger.log("\n--- Test: UpdateProject - Failure Nonexistent ParentId ---");
     
     // Create a test project
-    const testProject = addProject({
+    const testProject = registerTestProject(addProject({
         name: "Test Project for Nonexistent Parent",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testProject) {
         Logger.log("❌ Failed to create test project");
@@ -868,10 +876,10 @@ function testUpdateProject_Failure_CircularReference() {
     Logger.log("\n--- Test: UpdateProject - Failure Circular Reference ---");
     
     // Create a parent project
-    const parentProject = addProject({
+    const parentProject = registerTestProject(addProject({
         name: "Parent Project for Circular Test",
         expectTimeSpent: 20
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ Failed to create parent project");
@@ -879,11 +887,11 @@ function testUpdateProject_Failure_CircularReference() {
     }
     
     // Create a child project
-    const childProject = addProject({
+    const childProject = registerTestProject(addProject({
         name: "Child Project for Circular Test",
         expectTimeSpent: 10,
         parentId: parentProject.projectId
-    });
+    }));
     
     if (!childProject) {
         Logger.log("❌ Failed to create child project");
@@ -914,10 +922,10 @@ function testUpdateProject_Failure_CircularReference_WithTask() {
     Logger.log("\n--- Test: UpdateProject - Failure Circular Reference With Task ---");
     
     // Create a parent project
-    const parentProject = addProject({
+    const parentProject = registerTestProject(addProject({
         name: "Parent Project for Task Circular Test",
         expectTimeSpent: 20
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ Failed to create parent project");
@@ -925,11 +933,11 @@ function testUpdateProject_Failure_CircularReference_WithTask() {
     }
     
     // Create a task under the project
-    const task = addTask({
+    const task = registerTestTask(addTask({
         name: "Task for Circular Test",
         expectTimeSpent: 10,
         parentId: parentProject.projectId
-    });
+    }));
     
     if (!task) {
         Logger.log("❌ Failed to create task");
@@ -937,11 +945,11 @@ function testUpdateProject_Failure_CircularReference_WithTask() {
     }
     
     // Create a child project under the task
-    const childProject = addProject({
+    const childProject = registerTestProject(addProject({
         name: "Child Project for Task Circular Test",
         expectTimeSpent: 5,
         parentId: task.taskId
-    });
+    }));
     
     if (!childProject) {
         Logger.log("❌ Failed to create child project");
@@ -982,10 +990,10 @@ function testDeleteProject_Success_Basic() {
     Logger.log("\n--- Test: DeleteProject - Success Basic ---");
     
     // Create a test project
-    const testProject = addProject({
+    const testProject = registerTestProject(addProject({
         name: "Test Project for Delete",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testProject) {
         Logger.log("❌ Failed to create test project");
@@ -1009,10 +1017,10 @@ function testDeleteProject_Success_WithChildren() {
     Logger.log("\n--- Test: DeleteProject - Success With Children ---");
     
     // Create a parent project
-    const parentProject = addProject({
+    const parentProject = registerTestProject(addProject({
         name: "Parent Project for Delete",
         expectTimeSpent: 20
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ Failed to create parent project");
@@ -1020,45 +1028,45 @@ function testDeleteProject_Success_WithChildren() {
     }
     
     // Create child projects
-    const childProject1 = addProject({
+    const childProject1 = registerTestProject(addProject({
         name: "Child Project 1",
         expectTimeSpent: 10,
         parentId: parentProject.projectId
-    });
+    }));
     
-    const childProject2 = addProject({
+    const childProject2 = registerTestProject(addProject({
         name: "Child Project 2",
         expectTimeSpent: 15,
         parentId: parentProject.projectId
-    });
+    }));
     
     // Create tasks under the parent
-    const task1 = addTask({
+    const task1 = registerTestTask(addTask({
         name: "Task 1",
         expectTimeSpent: 5,
         parentId: parentProject.projectId
-    });
+    }));
     
-    const task2 = addTask({
+    const task2 = registerTestTask(addTask({
         name: "Task 2",
         expectTimeSpent: 8,
         parentId: parentProject.projectId
-    });
+    }));
     
     // Create events for the parent and children
-    const parentEvent = addCalendarEvent({
+    const parentEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Parent Event",
         eventStart: new Date(),
         eventEnd: new Date(Date.now() + 3600000),
         parentId: parentProject.projectId
-    });
+    }));
     
-    const childEvent = addCalendarEvent({
+    const childEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Child Event",
         eventStart: new Date(),
         eventEnd: new Date(Date.now() + 3600000),
         parentId: childProject1.projectId
-    });
+    }));
     
     // Delete the parent project
     const result = deleteProject(parentProject.projectId);
@@ -1106,10 +1114,10 @@ function testRemoveProject_Success_Basic() {
     Logger.log("\n--- Test: RemoveProject - Success Basic ---");
     
     // Create a test project
-    const testProject = addProject({
+    const testProject = registerTestProject(addProject({
         name: "Test Project for Remove",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testProject) {
         Logger.log("❌ Failed to create test project");
@@ -1133,10 +1141,10 @@ function testRemoveProject_Success_WithChildren() {
     Logger.log("\n--- Test: RemoveProject - Success With Children ---");
     
     // Create a parent project
-    const parentProject = addProject({
+    const parentProject = registerTestProject(addProject({
         name: "Parent Project for Remove",
         expectTimeSpent: 20
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ Failed to create parent project");
@@ -1144,30 +1152,30 @@ function testRemoveProject_Success_WithChildren() {
     }
     
     // Create child projects
-    const childProject1 = addProject({
+    const childProject1 = registerTestProject(addProject({
         name: "Child Project 1",
         expectTimeSpent: 10,
         parentId: parentProject.projectId
-    });
+    }));
     
-    const childProject2 = addProject({
+    const childProject2 = registerTestProject(addProject({
         name: "Child Project 2",
         expectTimeSpent: 15,
         parentId: parentProject.projectId
-    });
+    }));
     
     // Create tasks under the parent
-    const task1 = addTask({
+    const task1 = registerTestTask(addTask({
         name: "Task 1",
         expectTimeSpent: 5,
         parentId: parentProject.projectId
-    });
+    }));
     
-    const task2 = addTask({
+    const task2 = registerTestTask(addTask({
         name: "Task 2",
         expectTimeSpent: 8,
         parentId: parentProject.projectId
-    });
+    }));
     
     // Remove the parent project
     const result = removeProject(parentProject.projectId);
@@ -1225,10 +1233,10 @@ function testRemoveProjectWithEvents_Success_Basic() {
     Logger.log("\n--- Test: RemoveProjectWithEvents - Success Basic ---");
     
     // Create a test project
-    const testProject = addProject({
+    const testProject = registerTestProject(addProject({
         name: "Test Project for Remove With Events",
         expectTimeSpent: 10
-    });
+    }));
     
     if (!testProject) {
         Logger.log("❌ Failed to create test project");
@@ -1236,19 +1244,19 @@ function testRemoveProjectWithEvents_Success_Basic() {
     }
     
     // Create events for the project
-    const event1 = addCalendarEvent({
+    const event1 = registerTestCalendarEvent(addCalendarEvent({
         name: "Event 1",
         eventStart: new Date(),
         eventEnd: new Date(Date.now() + 3600000),
         parentId: testProject.projectId
-    });
+    }));
     
-    const event2 = addCalendarEvent({
+    const event2 = registerTestCalendarEvent(addCalendarEvent({
         name: "Event 2",
         eventStart: new Date(),
         eventEnd: new Date(Date.now() + 7200000),
         parentId: testProject.projectId
-    });
+    }));
     
     // Remove the project with its events
     const result = removeProjectWithEvents(testProject.projectId);
@@ -1268,10 +1276,10 @@ function testRemoveProjectWithEvents_Success_WithChildren() {
     Logger.log("\n--- Test: RemoveProjectWithEvents - Success With Children ---");
     
     // Create a parent project
-    const parentProject = addProject({
+    const parentProject = registerTestProject(addProject({
         name: "Parent Project for Remove With Events",
         expectTimeSpent: 20
-    });
+    }));
     
     if (!parentProject) {
         Logger.log("❌ Failed to create parent project");
@@ -1279,26 +1287,26 @@ function testRemoveProjectWithEvents_Success_WithChildren() {
     }
     
     // Create child project
-    const childProject = addProject({
+    const childProject = registerTestProject(addProject({
         name: "Child Project",
         expectTimeSpent: 10,
         parentId: parentProject.projectId
-    });
+    }));
     
     // Create events for parent and child
-    const parentEvent = addCalendarEvent({
+    const parentEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Parent Event",
         eventStart: new Date(),
         eventEnd: new Date(Date.now() + 3600000),
         parentId: parentProject.projectId
-    });
+    }));
     
-    const childEvent = addCalendarEvent({
+    const childEvent = registerTestCalendarEvent(addCalendarEvent({
         name: "Child Event",
         eventStart: new Date(),
         eventEnd: new Date(Date.now() + 3600000),
         parentId: childProject.projectId
-    });
+    }));
     
     // Remove the parent project with its events
     const result = removeProjectWithEvents(parentProject.projectId);

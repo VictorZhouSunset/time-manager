@@ -1,3 +1,4 @@
+// ------------------------------------------------------------------------------------------------
 // --- Assertion Helpers ---
 
 /**
@@ -94,4 +95,150 @@ function assertFunction(value, message) {
     }
     Logger.log(`SUCCESS: ${message}.`);
     return true;
+}
+
+
+
+
+// ------------------------------------------------------------------------------------------------
+// --- Test Data Cleanup Functions ---
+// ------------------------------------------------------------------------------------------------
+
+/**
+ * Tracks test objects created during tests for later cleanup
+ * Stores arrays of IDs in the format: {projectIds: [], taskIds: [], eventIds: []}
+ */
+const _testDataRegistry = {
+    projectIds: [],
+    taskIds: [],
+    eventIds: []
+};
+
+/**
+ * Registers a test project for later cleanup
+ * @param {object} project The project object returned from addProject
+ * @return {object} The same project object for chaining
+ */
+function registerTestProject(project) {
+    if (project && project.projectId) {
+        _testDataRegistry.projectIds.push(project.projectId);
+    }
+    return project;
+}
+
+/**
+ * Registers a test task for later cleanup
+ * @param {object} task The task object returned from addTask
+ * @return {object} The same task object for chaining
+ */
+function registerTestTask(task) {
+    if (task && task.taskId) {
+        _testDataRegistry.taskIds.push(task.taskId);
+    }
+    return task;
+}
+
+/**
+ * Registers a test calendar event for later cleanup
+ * @param {object} event The event object returned from addCalendarEvent
+ * @return {object} The same event object for chaining
+ */
+function registerTestCalendarEvent(event) {
+    if (event && event.eventId) {
+        _testDataRegistry.eventIds.push(event.eventId);
+    }
+    return event;
+}
+
+/**
+ * Cleans up all registered test data
+ * @return {boolean} True if cleanup was successful
+ */
+function cleanupTestData() {
+    Logger.log("\n--- Cleaning up test data ---");
+    let success = true;
+    
+    // First: clean up calendar events
+    Logger.log(`  Removing ${_testDataRegistry.eventIds.length} calendar events...`);
+    let eventsRemoved = 0;
+    
+    for (const eventId of _testDataRegistry.eventIds) {
+        try {
+            // Check if event still exists 
+            const event = getEventById(eventId);
+            if (!event) {
+                // Already removed somehow, skip
+                continue;
+            }
+            
+            if (deleteEvent(eventId)) {
+                eventsRemoved++;
+            } else {
+                Logger.log(`  ⚠️ Warning: Failed to remove calendar event ${eventId}`);
+                success = false;
+            }
+        } catch (error) {
+            Logger.log(`  ⚠️ Warning: Error removing calendar event ${eventId}: ${error}`);
+            success = false;
+        }
+    }
+    
+    // Second: remove all tasks using removeTask (preserves children)
+    Logger.log(`  Removing ${_testDataRegistry.taskIds.length} tasks...`);
+    let tasksRemoved = 0;
+    
+    for (const taskId of _testDataRegistry.taskIds) {
+        try {
+            // Check if task still exists
+            const task = getTaskById(taskId);
+            if (!task) {
+                // Already removed somehow, skip
+                continue;
+            }
+            
+            if (removeTask(taskId)) {
+                tasksRemoved++;
+            } else {
+                Logger.log(`  ⚠️ Warning: Failed to remove task ${taskId}`);
+                success = false;
+            }
+        } catch (error) {
+            Logger.log(`  ⚠️ Warning: Error removing task ${taskId}: ${error}`);
+            success = false;
+        }
+    }
+    
+    // Third: remove all projects using removeProject (preserves children)
+    Logger.log(`  Removing ${_testDataRegistry.projectIds.length} projects...`);
+    let projectsRemoved = 0;
+    
+    for (const projectId of _testDataRegistry.projectIds) {
+        try {
+            // Check if project still exists
+            const project = getProjectById(projectId);
+            if (!project) {
+                // Already removed somehow, skip
+                continue;
+            }
+            
+            if (removeProject(projectId)) {
+                projectsRemoved++;
+            } else {
+                Logger.log(`  ⚠️ Warning: Failed to remove project ${projectId}`);
+                success = false;
+            }
+        } catch (error) {
+            Logger.log(`  ⚠️ Warning: Error removing project ${projectId}: ${error}`);
+            success = false;
+        }
+    }
+    
+    // Clear the registry
+    _testDataRegistry.eventIds = [];
+    _testDataRegistry.taskIds = [];
+    _testDataRegistry.projectIds = [];
+    
+    Logger.log(`  ✅ Removed ${eventsRemoved} calendar events, ${tasksRemoved} tasks, and ${projectsRemoved} projects`);
+    Logger.log(`  ${success ? '✅ All test data cleaned up successfully' : '⚠️ Some cleanup operations failed'}`);
+    return success;
 }
