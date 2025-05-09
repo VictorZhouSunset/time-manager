@@ -112,7 +112,7 @@
     * **User should be able to manually update the project's `totalTimeSpent` field (inputting the new cumulative time spent).**
 * **Delete:**
     * User should be able to delete a project.
-    * When deleting a project, options or clear rules should be provided for handling its child projects and tasks (e.g., cascade delete, disallow deletion if children exist, or promote children to top-level). Associated `CalendarEvent`s must also be deleted.
+    * When deleting a project, options or clear rules should be provided for handling its child projects and tasks：there will be two functions, one allowing only deleting the current project (and deleting the parentID of its children while leaving the children itself untouched), one cascade deleting where all children of the current project are deleted too. Associated `CalendarEvent`s must also be deleted.
 
 ### 4.2 Task Management (CRUD - Hierarchy Supported)
 
@@ -131,7 +131,7 @@
     * **User should be able to manually update the task's `totalTimeSpent` field (inputting the new cumulative time spent).**
 * **Delete:**
     * User should be able to delete a task.
-    * When deleting a task, all associated `CalendarEvent` records must also be deleted. If tasks can have sub-tasks (not in the current model, but maybe in the future), those also need handling.
+    * When deleting a task, options or clear rules should be provided for handling its child projects and tasks：there will be two functions, one allowing only deleting the current task (and deleting the parentID of its children while leaving the children itself untouched), one cascade deleting where all children of the current task are deleted too. Associated `CalendarEvent`s must also be deleted.
 
 ### 4.3 Calendar Event Management (CRUD)
 

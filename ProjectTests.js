@@ -87,6 +87,45 @@ function runAllUpdateProjectTests() {
     return allTestsPassed;
 }
 
+function runAllDeleteProjectTests() {
+    Logger.log("======== RUNNING DELETEPROJECT TESTS ========");
+    let allTestsPassed = true;
+
+    // --- Individual Test Cases ---
+    // Basic deletion tests
+    // └── Tests simple project deletion
+    if (!testDeleteProject_Success_Basic()) allTestsPassed = false;
+    if (!testDeleteProject_Failure_InvalidProjectId()) allTestsPassed = false;
+    if (!testDeleteProject_Failure_NotFound()) allTestsPassed = false;
+
+    // Parent-child relationship tests
+    // └── Tests cascade deletion of projects and their children
+    if (!testDeleteProject_Success_WithChildren()) allTestsPassed = false;
+
+    // Tests for removing projects while preserving children
+    // └── Tests non-cascade deletion with child preservation
+    if (!testRemoveProject_Success_Basic()) allTestsPassed = false;
+    if (!testRemoveProject_Success_WithChildren()) allTestsPassed = false;
+    if (!testRemoveProject_Failure_InvalidProjectId()) allTestsPassed = false;
+    if (!testRemoveProject_Failure_NotFound()) allTestsPassed = false;
+
+    // Tests for removing projects with their events
+    // └── Tests deletion of projects and their associated calendar events
+    if (!testRemoveProjectWithEvents_Success_Basic()) allTestsPassed = false;
+    if (!testRemoveProjectWithEvents_Success_WithChildren()) allTestsPassed = false;
+    if (!testRemoveProjectWithEvents_Failure_InvalidProjectId()) allTestsPassed = false;
+    if (!testRemoveProjectWithEvents_Failure_NotFound()) allTestsPassed = false;
+
+    Logger.log("======== DELETEPROJECT TESTS COMPLETE ========");
+    if (allTestsPassed) {
+        Logger.log("🎉🎉🎉 ALL DELETEPROJECT TESTS PASSED! 🎉🎉🎉");
+    } else {
+        Logger.log("❌❌❌ SOME DELETEPROJECT TESTS FAILED. Check logs above. ❌❌❌");
+    }
+    return allTestsPassed;
+}
+
+
 // ---------------------------------------------------------------------------------------
 // --- Test Cases for addProject functions ---
 // ---------------------------------------------------------------------------------------
@@ -931,4 +970,378 @@ function testUpdateProject_Failure_CircularReference_WithTask() {
     const result = updateProject(parentProject.projectId, updateData);
     
     return assertNull(result, "Function should return null for circular reference through task");
+}
+
+
+
+// ---------------------------------------------------------------------------------------
+// --- Test Cases for deleteProject functions ---
+// ---------------------------------------------------------------------------------------
+
+function testDeleteProject_Success_Basic() {
+    Logger.log("\n--- Test: DeleteProject - Success Basic ---");
+    
+    // Create a test project
+    const testProject = addProject({
+        name: "Test Project for Delete",
+        expectTimeSpent: 10
+    });
+    
+    if (!testProject) {
+        Logger.log("❌ Failed to create test project");
+        return false;
+    }
+    
+    // Delete the project
+    const result = deleteProject(testProject.projectId);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return true for successful deletion") && pass;
+    
+    // Verify the project is actually deleted
+    const deletedProject = getProjectById(testProject.projectId);
+    pass = assertNull(deletedProject, "Project should no longer exist in the database") && pass;
+    
+    return pass;
+}
+
+function testDeleteProject_Success_WithChildren() {
+    Logger.log("\n--- Test: DeleteProject - Success With Children ---");
+    
+    // Create a parent project
+    const parentProject = addProject({
+        name: "Parent Project for Delete",
+        expectTimeSpent: 20
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ Failed to create parent project");
+        return false;
+    }
+    
+    // Create child projects
+    const childProject1 = addProject({
+        name: "Child Project 1",
+        expectTimeSpent: 10,
+        parentId: parentProject.projectId
+    });
+    
+    const childProject2 = addProject({
+        name: "Child Project 2",
+        expectTimeSpent: 15,
+        parentId: parentProject.projectId
+    });
+    
+    // Create tasks under the parent
+    const task1 = addTask({
+        name: "Task 1",
+        expectTimeSpent: 5,
+        parentId: parentProject.projectId
+    });
+    
+    const task2 = addTask({
+        name: "Task 2",
+        expectTimeSpent: 8,
+        parentId: parentProject.projectId
+    });
+    
+    // Create events for the parent and children
+    const parentEvent = addCalendarEvent({
+        name: "Parent Event",
+        eventStart: new Date(),
+        eventEnd: new Date(Date.now() + 3600000),
+        parentId: parentProject.projectId
+    });
+    
+    const childEvent = addCalendarEvent({
+        name: "Child Event",
+        eventStart: new Date(),
+        eventEnd: new Date(Date.now() + 3600000),
+        parentId: childProject1.projectId
+    });
+    
+    // Delete the parent project
+    const result = deleteProject(parentProject.projectId);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return true for successful deletion") && pass;
+    
+    // Verify everything is deleted
+    pass = assertNull(getProjectById(parentProject.projectId), "Parent project should be deleted") && pass;
+    pass = assertNull(getProjectById(childProject1.projectId), "Child project 1 should be deleted") && pass;
+    pass = assertNull(getProjectById(childProject2.projectId), "Child project 2 should be deleted") && pass;
+    pass = assertNull(getTaskById(task1.taskId), "Task 1 should be deleted") && pass;
+    pass = assertNull(getTaskById(task2.taskId), "Task 2 should be deleted") && pass;
+    pass = assertNull(getEventById(parentEvent.eventId), "Parent event should be deleted") && pass;
+    pass = assertNull(getEventById(childEvent.eventId), "Child event should be deleted") && pass;
+    
+    return pass;
+}
+
+function testDeleteProject_Failure_InvalidProjectId() {
+    Logger.log("\n--- Test: DeleteProject - Failure Invalid ProjectId ---");
+    
+    // Test with various invalid IDs
+    const invalidIds = [null, undefined, 123, "", "   ", "invalid-format"];
+    let pass = true;
+    
+    for (const invalidId of invalidIds) {
+        const result = deleteProject(invalidId);
+        pass = assertStrictEquals(result, false, `Function should return false for invalid ID: ${invalidId}`) && pass;
+    }
+    
+    return pass;
+}
+
+function testDeleteProject_Failure_NotFound() {
+    Logger.log("\n--- Test: DeleteProject - Failure Not Found ---");
+    
+    const nonExistentId = "P-DOES-NOT-EXIST-" + Utilities.getUuid();
+    const result = deleteProject(nonExistentId);
+    
+    return assertStrictEquals(result, false, "Function should return false for non-existent project ID");
+}
+
+function testRemoveProject_Success_Basic() {
+    Logger.log("\n--- Test: RemoveProject - Success Basic ---");
+    
+    // Create a test project
+    const testProject = addProject({
+        name: "Test Project for Remove",
+        expectTimeSpent: 10
+    });
+    
+    if (!testProject) {
+        Logger.log("❌ Failed to create test project");
+        return false;
+    }
+    
+    // Remove the project
+    const result = removeProject(testProject.projectId);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return true for successful removal") && pass;
+    
+    // Verify the project is actually removed
+    const removedProject = getProjectById(testProject.projectId);
+    pass = assertNull(removedProject, "Project should no longer exist in the database") && pass;
+    
+    return pass;
+}
+
+function testRemoveProject_Success_WithChildren() {
+    Logger.log("\n--- Test: RemoveProject - Success With Children ---");
+    
+    // Create a parent project
+    const parentProject = addProject({
+        name: "Parent Project for Remove",
+        expectTimeSpent: 20
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ Failed to create parent project");
+        return false;
+    }
+    
+    // Create child projects
+    const childProject1 = addProject({
+        name: "Child Project 1",
+        expectTimeSpent: 10,
+        parentId: parentProject.projectId
+    });
+    
+    const childProject2 = addProject({
+        name: "Child Project 2",
+        expectTimeSpent: 15,
+        parentId: parentProject.projectId
+    });
+    
+    // Create tasks under the parent
+    const task1 = addTask({
+        name: "Task 1",
+        expectTimeSpent: 5,
+        parentId: parentProject.projectId
+    });
+    
+    const task2 = addTask({
+        name: "Task 2",
+        expectTimeSpent: 8,
+        parentId: parentProject.projectId
+    });
+    
+    // Remove the parent project
+    const result = removeProject(parentProject.projectId);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return true for successful removal") && pass;
+    
+    // Verify parent is removed but children are preserved
+    pass = assertNull(getProjectById(parentProject.projectId), "Parent project should be removed") && pass;
+    
+    // Verify children still exist but have no parent
+    const updatedChild1 = getProjectById(childProject1.projectId);
+    const updatedChild2 = getProjectById(childProject2.projectId);
+    const updatedTask1 = getTaskById(task1.taskId);
+    const updatedTask2 = getTaskById(task2.taskId);
+    
+    pass = assertTruthy(updatedChild1, "Child project 1 should still exist") && pass;
+    pass = assertTruthy(updatedChild2, "Child project 2 should still exist") && pass;
+    pass = assertTruthy(updatedTask1, "Task 1 should still exist") && pass;
+    pass = assertTruthy(updatedTask2, "Task 2 should still exist") && pass;
+    
+    if (updatedChild1) pass = assertNull(updatedChild1.parentId, "Child project 1 should have no parent") && pass;
+    if (updatedChild2) pass = assertNull(updatedChild2.parentId, "Child project 2 should have no parent") && pass;
+    if (updatedTask1) pass = assertNull(updatedTask1.parentId, "Task 1 should have no parent") && pass;
+    if (updatedTask2) pass = assertNull(updatedTask2.parentId, "Task 2 should have no parent") && pass;
+    
+    return pass;
+}
+
+function testRemoveProject_Failure_InvalidProjectId() {
+    Logger.log("\n--- Test: RemoveProject - Failure Invalid ProjectId ---");
+    
+    // Test with various invalid IDs
+    const invalidIds = [null, undefined, 123, "", "   ", "invalid-format"];
+    let pass = true;
+    
+    for (const invalidId of invalidIds) {
+        const result = removeProject(invalidId);
+        pass = assertStrictEquals(result, false, `Function should return false for invalid ID: ${invalidId}`) && pass;
+    }
+    
+    return pass;
+}
+
+function testRemoveProject_Failure_NotFound() {
+    Logger.log("\n--- Test: RemoveProject - Failure Not Found ---");
+    
+    const nonExistentId = "P-DOES-NOT-EXIST-" + Utilities.getUuid();
+    const result = removeProject(nonExistentId);
+    
+    return assertStrictEquals(result, false, "Function should return false for non-existent project ID");
+}
+
+function testRemoveProjectWithEvents_Success_Basic() {
+    Logger.log("\n--- Test: RemoveProjectWithEvents - Success Basic ---");
+    
+    // Create a test project
+    const testProject = addProject({
+        name: "Test Project for Remove With Events",
+        expectTimeSpent: 10
+    });
+    
+    if (!testProject) {
+        Logger.log("❌ Failed to create test project");
+        return false;
+    }
+    
+    // Create events for the project
+    const event1 = addCalendarEvent({
+        name: "Event 1",
+        eventStart: new Date(),
+        eventEnd: new Date(Date.now() + 3600000),
+        parentId: testProject.projectId
+    });
+    
+    const event2 = addCalendarEvent({
+        name: "Event 2",
+        eventStart: new Date(),
+        eventEnd: new Date(Date.now() + 7200000),
+        parentId: testProject.projectId
+    });
+    
+    // Remove the project with its events
+    const result = removeProjectWithEvents(testProject.projectId);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return true for successful removal") && pass;
+    
+    // Verify project and its events are removed
+    pass = assertNull(getProjectById(testProject.projectId), "Project should be removed") && pass;
+    pass = assertNull(getEventById(event1.eventId), "Event 1 should be removed") && pass;
+    pass = assertNull(getEventById(event2.eventId), "Event 2 should be removed") && pass;
+    
+    return pass;
+}
+
+function testRemoveProjectWithEvents_Success_WithChildren() {
+    Logger.log("\n--- Test: RemoveProjectWithEvents - Success With Children ---");
+    
+    // Create a parent project
+    const parentProject = addProject({
+        name: "Parent Project for Remove With Events",
+        expectTimeSpent: 20
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ Failed to create parent project");
+        return false;
+    }
+    
+    // Create child project
+    const childProject = addProject({
+        name: "Child Project",
+        expectTimeSpent: 10,
+        parentId: parentProject.projectId
+    });
+    
+    // Create events for parent and child
+    const parentEvent = addCalendarEvent({
+        name: "Parent Event",
+        eventStart: new Date(),
+        eventEnd: new Date(Date.now() + 3600000),
+        parentId: parentProject.projectId
+    });
+    
+    const childEvent = addCalendarEvent({
+        name: "Child Event",
+        eventStart: new Date(),
+        eventEnd: new Date(Date.now() + 3600000),
+        parentId: childProject.projectId
+    });
+    
+    // Remove the parent project with its events
+    const result = removeProjectWithEvents(parentProject.projectId);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return true for successful removal") && pass;
+    
+    // Verify parent and its events are removed, but child and its events remain
+    pass = assertNull(getProjectById(parentProject.projectId), "Parent project should be removed") && pass;
+    pass = assertNull(getEventById(parentEvent.eventId), "Parent event should be removed") && pass;
+    
+    // Verify child project and its event still exist
+    const updatedChild = getProjectById(childProject.projectId);
+    const updatedChildEvent = getEventById(childEvent.eventId);
+    
+    pass = assertTruthy(updatedChild, "Child project should still exist") && pass;
+    pass = assertTruthy(updatedChildEvent, "Child event should still exist") && pass;
+    
+    if (updatedChild) pass = assertNull(updatedChild.parentId, "Child project should have no parent") && pass;
+    
+    return pass;
+}
+
+function testRemoveProjectWithEvents_Failure_InvalidProjectId() {
+    Logger.log("\n--- Test: RemoveProjectWithEvents - Failure Invalid ProjectId ---");
+    
+    // Test with various invalid IDs
+    const invalidIds = [null, undefined, 123, "", "   ", "invalid-format"];
+    let pass = true;
+    
+    for (const invalidId of invalidIds) {
+        const result = removeProjectWithEvents(invalidId);
+        pass = assertStrictEquals(result, false, `Function should return false for invalid ID: ${invalidId}`) && pass;
+    }
+    
+    return pass;
+}
+
+function testRemoveProjectWithEvents_Failure_NotFound() {
+    Logger.log("\n--- Test: RemoveProjectWithEvents - Failure Not Found ---");
+    
+    const nonExistentId = "P-DOES-NOT-EXIST-" + Utilities.getUuid();
+    const result = removeProjectWithEvents(nonExistentId);
+    
+    return assertStrictEquals(result, false, "Function should return false for non-existent project ID");
 }

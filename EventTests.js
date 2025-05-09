@@ -77,6 +77,27 @@ function runAllUpdateCalendarEventTests() {
     return allTestsPassed;
 }
 
+function runAllDeleteCalendarEventTests() {
+    Logger.log("======== RUNNING DELETECALENDAREVENT TESTS ========");
+    let allTestsPassed = true;
+
+    // --- Individual Test Cases ---
+    // Basic deletion tests
+    // └── Tests simple event deletion
+    if (!testDeleteCalendarEvent_Success_Basic()) allTestsPassed = false;
+    if (!testDeleteCalendarEvent_Failure_InvalidEventId()) allTestsPassed = false;
+    if (!testDeleteCalendarEvent_Failure_NotFound()) allTestsPassed = false;
+
+    Logger.log("======== DELETECALENDAREVENT TESTS COMPLETE ========");
+    if (allTestsPassed) {
+        Logger.log("🎉🎉🎉 ALL DELETECALENDAREVENT TESTS PASSED! 🎉🎉🎉");
+    } else {
+        Logger.log("❌❌❌ SOME DELETECALENDAREVENT TESTS FAILED. Check logs above. ❌❌❌");
+    }
+    return allTestsPassed;
+}
+
+
 // ---------------------------------------------------------------------------------------
 // --- Test Cases for addCalendarEvent functions ---
 // ---------------------------------------------------------------------------------------
@@ -409,8 +430,16 @@ function testGetCalendarEventById_Failure_InvalidId() {
 function testGetCalendarEventsByParentId_Success_Basic() {
     Logger.log("\n--- Test: GetEventsByParentId - Success ---");
     
-    // Setup: Create events with a parent ID
-    const parentId = "P-TEST-PARENT-" + Utilities.getUuid().substring(0, 8);
+    // Create a parent project first instead of using a hardcoded ID
+    const parentProject = addProject({ 
+        name: "Parent Project for Events Test", 
+        expectTimeSpent: 10 
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ FAIL: Could not create test parent project for GetEventsByParentId test");
+        return false;
+    }
     
     const startTime1 = new Date();
     const endTime1 = new Date(startTime1.getTime() + (1 * 60 * 60 * 1000));
@@ -418,7 +447,7 @@ function testGetCalendarEventsByParentId_Success_Basic() {
         name: "Child Event 1", 
         eventStart: startTime1, 
         eventEnd: endTime1,
-        parentId: parentId
+        parentId: parentProject.projectId
     });
     
     const startTime2 = new Date();
@@ -427,7 +456,7 @@ function testGetCalendarEventsByParentId_Success_Basic() {
         name: "Child Event 2", 
         eventStart: startTime2, 
         eventEnd: endTime2,
-        parentId: parentId
+        parentId: parentProject.projectId
     });
     
     // Add an unrelated event
@@ -439,8 +468,13 @@ function testGetCalendarEventsByParentId_Success_Basic() {
         eventEnd: endTime3
     });
     
+    if (!childEvent1 || !childEvent2 || !unrelatedEvent) {
+        Logger.log("❌ FAIL: Could not create test events for GetEventsByParentId test");
+        return false;
+    }
+    
     // Execute
-    const childEvents = getEventsByParentId(parentId);
+    const childEvents = getEventsByParentId(parentProject.projectId);
     
     // Verify
     let pass = true;
@@ -462,11 +496,19 @@ function testGetCalendarEventsByParentId_Success_Basic() {
 function testGetCalendarEventsByParentId_Success_NoChildren() {
     Logger.log("\n--- Test: GetEventsByParentId - No Children ---");
     
-    // Generate a parent ID that likely has no events
-    const unusedParentId = "P-UNUSED-" + Utilities.getUuid();
+    // Create a parent project with no events
+    const parentProject = addProject({ 
+        name: "Parent Project with No Events", 
+        expectTimeSpent: 10 
+    });
+    
+    if (!parentProject) {
+        Logger.log("❌ FAIL: Could not create test parent project for NoChildren test");
+        return false;
+    }
     
     // Execute
-    const childEvents = getEventsByParentId(unusedParentId);
+    const childEvents = getEventsByParentId(parentProject.projectId);
     
     // Verify
     let pass = true;
@@ -814,5 +856,66 @@ function testUpdateCalendarEvent_Failure_NonexistentParentId() {
     
     return assertNull(result, "Function should return null for non-existent parent ID");
 }
+
+
+// ---------------------------------------------------------------------------------------
+// --- Test Cases for deleteCalendarEvent functions ---
+// ---------------------------------------------------------------------------------------
+
+function testDeleteCalendarEvent_Success_Basic() {
+    Logger.log("\n--- Test: DeleteEvent - Success Basic ---");
+    
+    // Create a test event
+    const testEvent = addCalendarEvent({
+        name: "Test Event for Delete",
+        eventStart: new Date(),
+        eventEnd: new Date(Date.now() + 3600000) // 1 hour later
+    });
+    
+    if (!testEvent) {
+        Logger.log("❌ Failed to create test event");
+        return false;
+    }
+    
+    // Delete the event
+    const result = deleteEvent(testEvent.eventId);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return true for successful deletion") && pass;
+    
+    // Verify the event is actually deleted
+    const deletedEvent = getEventById(testEvent.eventId);
+    pass = assertNull(deletedEvent, "Event should no longer exist in the database") && pass;
+    
+    return pass;
+}
+
+function testDeleteCalendarEvent_Failure_InvalidEventId() {
+    Logger.log("\n--- Test: DeleteEvent - Failure Invalid EventId ---");
+    
+    // Test with various invalid IDs
+    const invalidIds = [null, undefined, 123, "", "   ", "invalid-format"];
+    let pass = true;
+    
+    for (const invalidId of invalidIds) {
+        const result = deleteEvent(invalidId);
+        pass = assertStrictEquals(result, false, `Function should return false for invalid ID: ${invalidId}`) && pass;
+    }
+    
+    return pass;
+}
+
+function testDeleteCalendarEvent_Failure_NotFound() {
+    Logger.log("\n--- Test: DeleteEvent - Failure Not Found ---");
+    
+    const nonExistentId = "CE-DOES-NOT-EXIST-" + Utilities.getUuid();
+    const result = deleteEvent(nonExistentId);
+    
+    return assertStrictEquals(result, false, "Function should return false for non-existent event ID");
+}
+
+
+
+
 
 

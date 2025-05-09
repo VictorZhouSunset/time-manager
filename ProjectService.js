@@ -381,6 +381,213 @@ function updateProject(projectId, updateData) {
     }
 }
 
+
+// ------------------------------------------------------------------------------------------------
+// Delete functions
+// ------------------------------------------------------------------------------------------------
+
+/**
+ * Deletes a project and all its child projects and tasks (cascade deletion).
+ * Also deletes all associated calendar events.
+ * @param {string} projectId The ID of the project to delete
+ * @return {boolean} True if deletion was successful, false otherwise
+ */
+function deleteProject(projectId) {
+    // Input validation
+    if (!projectId || typeof projectId !== 'string' || projectId.trim() === '') {
+        Logger.log('Error: Invalid projectId provided. It must be a non-empty string.');
+        return false;
+    }
+
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(PROJECTS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${PROJECTS_SHEET_NAME}" not found!`);
+        }
+
+        // Get all projects and tasks to find children
+        const allProjects = getAllProjects();
+        const allTasks = getAllTasks();
+        const allEvents = getAllEvents();
+
+        // Find all child projects and tasks
+        const childProjects = allProjects.filter(p => p.parentId === projectId);
+        const childTasks = allTasks.filter(t => t.parentId === projectId);
+
+        // Recursively delete all child projects
+        for (const childProject of childProjects) {
+            deleteProject(childProject.projectId);
+        }
+
+        // Delete all child tasks
+        for (const childTask of childTasks) {
+            deleteTask(childTask.taskId);
+        }
+
+        // Delete all associated calendar events
+        const associatedEvents = allEvents.filter(e => e.parentId === projectId);
+        for (const event of associatedEvents) {
+            deleteEvent(event.eventId);
+        }
+
+        // Find and delete the project itself
+        const data = sheet.getDataRange().getValues();
+        const projectRowIndex = data.slice(1).findIndex(row => row[0] === projectId);
+        
+        if (projectRowIndex === -1) {
+            Logger.log(`Error: Project with ID '${projectId}' not found.`);
+            return false;
+        }
+
+        // Delete the row
+        sheet.deleteRow(projectRowIndex + 2);
+
+        Logger.log(`Project and all its children deleted: ID = ${projectId}`);
+        return true;
+
+    } catch (error) {
+        Logger.log(`Failed to delete project: ${error}`);
+        return false;
+    }
+}
+
+/**
+ * Removes a project while preserving its child projects and tasks.
+ * Updates the parentId of all children to null.
+ * Also removes the parentId from associated calendar events.
+ * @param {string} projectId The ID of the project to remove
+ * @return {boolean} True if removal was successful, false otherwise
+ */
+function removeProject(projectId) {
+    // Input validation
+    if (!projectId || typeof projectId !== 'string' || projectId.trim() === '') {
+        Logger.log('Error: Invalid projectId provided. It must be a non-empty string.');
+        return false;
+    }
+
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(PROJECTS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${PROJECTS_SHEET_NAME}" not found!`);
+        }
+
+        // Get all projects and tasks to find children
+        const allProjects = getAllProjects();
+        const allTasks = getAllTasks();
+        const allEvents = getAllEvents();
+
+        // Find all child projects and tasks
+        const childProjects = allProjects.filter(p => p.parentId === projectId);
+        const childTasks = allTasks.filter(t => t.parentId === projectId);
+
+        // Update parentId to null for all child projects
+        for (const childProject of childProjects) {
+            updateProject(childProject.projectId, { parentId: null });
+        }
+
+        // Update parentId to null for all child tasks
+        for (const childTask of childTasks) {
+            updateTask(childTask.taskId, { parentId: null });
+        }
+
+        // Update parentId to null for all associated calendar events
+        const associatedEvents = allEvents.filter(e => e.parentId === projectId);
+        for (const event of associatedEvents) {
+            updateCalendarEvent(event.eventId, { parentId: null });
+        }
+
+        // Find and delete the project itself
+        const data = sheet.getDataRange().getValues();
+        const projectRowIndex = data.slice(1).findIndex(row => row[0] === projectId);
+        
+        if (projectRowIndex === -1) {
+            Logger.log(`Error: Project with ID '${projectId}' not found.`);
+            return false;
+        }
+
+        // Delete the row
+        sheet.deleteRow(projectRowIndex + 2);
+
+        Logger.log(`Project removed (children preserved): ID = ${projectId}`);
+        return true;
+
+    } catch (error) {
+        Logger.log(`Failed to remove project: ${error}`);
+        return false;
+    }
+}
+
+/**
+ * Removes a project and its associated calendar events, while preserving its child projects and tasks.
+ * Children and their events remain untouched.
+ * @param {string} projectId The ID of the project to remove
+ * @return {boolean} True if removal was successful, false otherwise
+ */
+function removeProjectWithEvents(projectId) {
+    // Input validation
+    if (!projectId || typeof projectId !== 'string' || projectId.trim() === '') {
+        Logger.log('Error: Invalid projectId provided. It must be a non-empty string.');
+        return false;
+    }
+
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(PROJECTS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${PROJECTS_SHEET_NAME}" not found!`);
+        }
+
+        // Get all projects, tasks, and events to find related items
+        const allProjects = getAllProjects();
+        const allTasks = getAllTasks();
+        const allEvents = getAllEvents();
+
+        // Find all child projects and tasks
+        const childProjects = allProjects.filter(p => p.parentId === projectId);
+        const childTasks = allTasks.filter(t => t.parentId === projectId);
+
+        // Update parentId to null for all child projects
+        for (const childProject of childProjects) {
+            updateProject(childProject.projectId, { parentId: null });
+        }
+
+        // Update parentId to null for all child tasks
+        for (const childTask of childTasks) {
+            updateTask(childTask.taskId, { parentId: null });
+        }
+
+        // Delete all associated calendar events
+        const associatedEvents = allEvents.filter(e => e.parentId === projectId);
+        for (const event of associatedEvents) {
+            deleteEvent(event.eventId);
+        }
+
+        // Find and delete the project itself
+        const data = sheet.getDataRange().getValues();
+        const projectRowIndex = data.slice(1).findIndex(row => row[0] === projectId);
+        
+        if (projectRowIndex === -1) {
+            Logger.log(`Error: Project with ID '${projectId}' not found.`);
+            return false;
+        }
+
+        // Delete the row
+        sheet.deleteRow(projectRowIndex + 2);
+
+        Logger.log(`Project and its events removed (children preserved with parentId set to null): ID = ${projectId}`);
+        return true;
+
+    } catch (error) {
+        Logger.log(`Failed to remove project with events: ${error}`);
+        return false;
+    }
+}
+
 // ------------------------------------------------------------------------------------------------
 // Helper functions
 // ------------------------------------------------------------------------------------------------
@@ -395,7 +602,7 @@ function updateProject(projectId, updateData) {
 function rowToProject(row) {
     return {
         projectId: row[0],
-        parentId: row[1],
+        parentId: row[1] === "" ? null : row[1],
         name: row[2],
         description: row[3],
         status: row[4],

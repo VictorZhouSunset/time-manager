@@ -4,11 +4,15 @@ function runAllAddTaskTests() {
     let allTestsPassed = true;
 
     // --- Individual Test Cases ---
+    // Basic task creation tests
+    // └── Tests creating tasks with and without parents
     if (!testAddTask_Success_Basic_WithParent()) allTestsPassed = false;
     if (!testAddTask_Success_Basic_NoParent()) allTestsPassed = false;
     if (!testAddTask_Success_AllFields_WithParent()) allTestsPassed = false;
     if (!testAddTask_Success_SpecificStatusAndTime_WithParent()) allTestsPassed = false;
 
+    // Input validation tests
+    // └── Tests handling of invalid inputs
     if (!testAddTask_Failure_MissingName()) allTestsPassed = false;
     if (!testAddTask_Failure_MissingName_NoParent()) allTestsPassed = false;
     if (!testAddTask_Failure_MissingExpectTime()) allTestsPassed = false;
@@ -17,11 +21,15 @@ function runAllAddTaskTests() {
     if (!testAddTask_Failure_EmptyParentIdString()) allTestsPassed = false;
     if (!testAddTask_Failure_NonexistentParentId()) allTestsPassed = false;
 
+    // Warning handling tests
+    // └── Tests handling of invalid but recoverable inputs
     if (!testAddTask_Warning_InvalidDescriptionType()) allTestsPassed = false;
     if (!testAddTask_Warning_InvalidStatus()) allTestsPassed = false;
     if (!testAddTask_Warning_InvalidTotalTimeType()) allTestsPassed = false;
     if (!testAddTask_Warning_NegativeTotalTime()) allTestsPassed = false;
 
+    // Special case tests
+    // └── Tests edge cases and special scenarios
     if (!testAddTask_Success_ZeroTimes()) allTestsPassed = false;
     if (!testAddTask_Success_TaskWithTaskParent()) allTestsPassed = false;
 
@@ -91,6 +99,53 @@ function runAllUpdateTaskTests() {
     return allTestsPassed;
 }
 
+function runAllDeleteTaskTests() {
+    Logger.log("======== RUNNING DELETETASK TESTS ========");
+    let allTestsPassed = true;
+
+    // --- Individual Test Cases ---
+    // Basic deletion tests
+    // └── Tests simple task deletion
+    if (!testDeleteTask_Success_Basic()) allTestsPassed = false;
+    if (!testDeleteTask_Failure_InvalidTaskId()) allTestsPassed = false;
+    if (!testDeleteTask_Failure_NotFound()) allTestsPassed = false;
+
+    // Parent-child relationship tests
+    // └── Tests cascade deletion of tasks and their children
+    //              parentTask
+    //         ↓                ↓
+    //     childTask1       childTask2
+    if (!testDeleteTask_Success_WithChildren()) allTestsPassed = false;
+
+    // Tests for removing tasks while preserving children
+    // └── Tests non-cascade deletion with child preservation
+    //                                      parentTask (removed)
+    //         ↓                                                            ↓
+    //     childTask1 (preserved, parentId set to null)        childTask2 (preserved, parentId set to null)   
+
+    if (!testRemoveTask_Success_Basic()) allTestsPassed = false;
+    if (!testRemoveTask_Success_WithChildren()) allTestsPassed = false;
+    if (!testRemoveTask_Failure_InvalidTaskId()) allTestsPassed = false;
+    if (!testRemoveTask_Failure_NotFound()) allTestsPassed = false;
+
+    // Tests for removing tasks with their events
+    // └── Tests deletion of tasks and their associated calendar events
+    //                              parentTask (removed)
+    //         ↓                                  ↓                          ↓
+    //     childTask1 (preserved)        childTask2 (preserved)           events (removed)
+    if (!testRemoveTaskWithEvents_Success_Basic()) allTestsPassed = false;
+    if (!testRemoveTaskWithEvents_Success_WithChildren()) allTestsPassed = false;
+    if (!testRemoveTaskWithEvents_Failure_InvalidTaskId()) allTestsPassed = false;
+    if (!testRemoveTaskWithEvents_Failure_NotFound()) allTestsPassed = false;
+
+    Logger.log("======== DELETETASK TESTS COMPLETE ========");
+    if (allTestsPassed) {
+        Logger.log("🎉🎉🎉 ALL DELETETASK TESTS PASSED! 🎉🎉🎉");
+    } else {
+        Logger.log("❌❌❌ SOME DELETETASK TESTS FAILED. Check logs above. ❌❌❌");
+    }
+    return allTestsPassed;
+}
 
 // ---------------------------------------------------------------------------------------
 // --- Test Cases for addTask functions ---
@@ -515,18 +570,26 @@ function testGetTaskById_Failure_InvalidId() {
 function testGetTasksByParentId_Success_Basic() {
     Logger.log("\n--- Test: GetTasksByParentId - Success Basic ---");
     // First, create a parent project/task
-    const parentId = 'P-test-parent-for-tasks';
+    const parentProject = addProject({ 
+        name: "Test Parent for Tasks", 
+        expectTimeSpent: 10 
+    });
+    
+    if (!parentProject) {
+        Logger.log("  ❌ FAIL: Could not create test parent project for GetTasksByParentId test");
+        return false;
+    }
     
     // Create a few tasks with this parent
     const taskData1 = {
         name: "Child Task 1",
         expectTimeSpent: 2,
-        parentId: parentId
+        parentId: parentProject.projectId
     };
     const taskData2 = {
         name: "Child Task 2",
         expectTimeSpent: 3,
-        parentId: parentId
+        parentId: parentProject.projectId
     };
     
     const createdTask1 = addTask(taskData1);
@@ -538,7 +601,7 @@ function testGetTasksByParentId_Success_Basic() {
     }
     
     // Now get tasks by parent ID
-    const result = getTasksByParentId(parentId);
+    const result = getTasksByParentId(parentProject.projectId);
     let pass = true;
     
     pass = assertArray(result, "Function should return an array of tasks") && pass;
@@ -987,16 +1050,6 @@ function testUpdateTask_Failure_CircularReference() {
     }
     
     // Try to make parent task a child of its child (circular reference)
-    // Initial structure:    parentTask
-    //                         ↓
-    //                     childTask
-    //
-    // Attempted structure: parentTask
-    //                         ↓
-    //                     childTask
-    //                         ↓
-    //                     parentTask (circular!)
-    
     const updateData = {
         parentId: childTask.taskId
     };
@@ -1045,20 +1098,6 @@ function testUpdateTask_Failure_CircularReference_WithProject() {
     }
     
     // Try to make parent task a child of the child task (circular reference)
-    // Initial structure:    parentTask
-    //                         ↓
-    //                      project
-    //                         ↓
-    //                     childTask
-    //
-    // Attempted structure: parentTask
-    //                         ↓
-    //                      project
-    //                         ↓
-    //                     childTask
-    //                         ↓
-    //                     parentTask (circular!)
-    
     const updateData = {
         parentId: childTask.taskId
     };
@@ -1067,4 +1106,356 @@ function testUpdateTask_Failure_CircularReference_WithProject() {
     
     return assertNull(result, "Function should return null for circular reference through project");
 }
+
+
+// ---------------------------------------------------------------------------------------
+// --- Test Cases for deleteTask functions ---
+// ---------------------------------------------------------------------------------------
+
+function testDeleteTask_Success_Basic() {
+    Logger.log("\n--- Test: DeleteTask - Success Basic ---");
+    
+    // Create a test task
+    const testTask = addTask({
+        name: "Test Task for Delete",
+        expectTimeSpent: 10
+    });
+    
+    if (!testTask) {
+        Logger.log("❌ Failed to create test task");
+        return false;
+    }
+    
+    // Delete the task
+    const result = deleteTask(testTask.taskId);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return true for successful deletion") && pass;
+    
+    // Verify the task is actually deleted
+    const deletedTask = getTaskById(testTask.taskId);
+    pass = assertNull(deletedTask, "Task should no longer exist in the database") && pass;
+    
+    return pass;
+}
+
+function testDeleteTask_Success_WithChildren() {
+    Logger.log("\n--- Test: DeleteTask - Success With Children ---");
+    
+    // Create a parent task
+    const parentTask = addTask({
+        name: "Parent Task for Delete",
+        expectTimeSpent: 20
+    });
+    
+    if (!parentTask) {
+        Logger.log("❌ Failed to create parent task");
+        return false;
+    }
+    
+    // Create two direct child tasks under the parent
+    const childTask1 = addTask({
+        name: "Child Task 1",
+        expectTimeSpent: 10,
+        parentId: parentTask.taskId
+    });
+    
+    const childTask2 = addTask({
+        name: "Child Task 2",
+        expectTimeSpent: 15,
+        parentId: parentTask.taskId
+    });
+    
+    // Create events for the parent and children
+    const parentEvent = addCalendarEvent({
+        name: "Parent Event",
+        eventStart: new Date(),
+        eventEnd: new Date(Date.now() + 3600000),
+        parentId: parentTask.taskId
+    });
+    
+    const childEvent1 = addCalendarEvent({
+        name: "Child Event 1",
+        eventStart: new Date(),
+        eventEnd: new Date(Date.now() + 3600000),
+        parentId: childTask1.taskId
+    });
+    
+    const childEvent2 = addCalendarEvent({
+        name: "Child Event 2",
+        eventStart: new Date(),
+        eventEnd: new Date(Date.now() + 3600000),
+        parentId: childTask2.taskId
+    });
+    
+    // Delete the parent task
+    const result = deleteTask(parentTask.taskId);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return true for successful deletion") && pass;
+    
+    // Verify everything is deleted
+    pass = assertNull(getTaskById(parentTask.taskId), "Parent task should be deleted") && pass;
+    pass = assertNull(getTaskById(childTask1.taskId), "Child task 1 should be deleted") && pass;
+    pass = assertNull(getTaskById(childTask2.taskId), "Child task 2 should be deleted") && pass;
+    pass = assertNull(getEventById(parentEvent.eventId), "Parent event should be deleted") && pass;
+    pass = assertNull(getEventById(childEvent1.eventId), "Child event 1 should be deleted") && pass;
+    pass = assertNull(getEventById(childEvent2.eventId), "Child event 2 should be deleted") && pass;
+    
+    return pass;
+}
+
+function testDeleteTask_Failure_InvalidTaskId() {
+    Logger.log("\n--- Test: DeleteTask - Failure Invalid TaskId ---");
+    
+    // Test with various invalid IDs
+    const invalidIds = [null, undefined, 123, "", "   ", "invalid-format"];
+    let pass = true;
+    
+    for (const invalidId of invalidIds) {
+        const result = deleteTask(invalidId);
+        pass = assertStrictEquals(result, false, `Function should return false for invalid ID: ${invalidId}`) && pass;
+    }
+    
+    return pass;
+}
+
+function testDeleteTask_Failure_NotFound() {
+    Logger.log("\n--- Test: DeleteTask - Failure Not Found ---");
+    
+    const nonExistentId = "T-DOES-NOT-EXIST-" + Utilities.getUuid();
+    const result = deleteTask(nonExistentId);
+    
+    return assertStrictEquals(result, false, "Function should return false for non-existent task ID");
+}
+
+function testRemoveTask_Success_Basic() {
+    Logger.log("\n--- Test: RemoveTask - Success Basic ---");
+    
+    // Create a test task
+    const testTask = addTask({
+        name: "Test Task for Remove",
+        expectTimeSpent: 10
+    });
+    
+    if (!testTask) {
+        Logger.log("❌ Failed to create test task");
+        return false;
+    }
+    
+    // Remove the task
+    const result = removeTask(testTask.taskId);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return true for successful removal") && pass;
+    
+    // Verify the task is actually removed
+    const removedTask = getTaskById(testTask.taskId);
+    pass = assertNull(removedTask, "Task should no longer exist in the database") && pass;
+    
+    return pass;
+}
+
+function testRemoveTask_Success_WithChildren() {
+    Logger.log("\n--- Test: RemoveTask - Success With Children ---");
+    
+    // Create a parent task
+    const parentTask = addTask({
+        name: "Parent Task for Remove",
+        expectTimeSpent: 20
+    });
+    
+    if (!parentTask) {
+        Logger.log("❌ Failed to create parent task");
+        return false;
+    }
+    
+    // Create child tasks
+    const childTask1 = addTask({
+        name: "Child Task 1",
+        expectTimeSpent: 10,
+        parentId: parentTask.taskId
+    });
+    
+    const childTask2 = addTask({
+        name: "Child Task 2",
+        expectTimeSpent: 15,
+        parentId: parentTask.taskId
+    });
+    
+    // Remove the parent task
+    const result = removeTask(parentTask.taskId);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return true for successful removal") && pass;
+    
+    // Verify parent is removed but children are preserved
+    pass = assertNull(getTaskById(parentTask.taskId), "Parent task should be removed") && pass;
+    
+    // Verify children still exist but have no parent
+    const updatedChild1 = getTaskById(childTask1.taskId);
+    const updatedChild2 = getTaskById(childTask2.taskId);
+    
+    pass = assertTruthy(updatedChild1, "Child task 1 should still exist") && pass;
+    pass = assertTruthy(updatedChild2, "Child task 2 should still exist") && pass;
+    
+    if (updatedChild1) pass = assertNull(updatedChild1.parentId, "Child task 1 should have no parent") && pass;
+    if (updatedChild2) pass = assertNull(updatedChild2.parentId, "Child task 2 should have no parent") && pass;
+    
+    return pass;
+}
+
+function testRemoveTask_Failure_InvalidTaskId() {
+    Logger.log("\n--- Test: RemoveTask - Failure Invalid TaskId ---");
+    
+    // Test with various invalid IDs
+    const invalidIds = [null, undefined, 123, "", "   ", "invalid-format"];
+    let pass = true;
+    
+    for (const invalidId of invalidIds) {
+        const result = removeTask(invalidId);
+        pass = assertStrictEquals(result, false, `Function should return false for invalid ID: ${invalidId}`) && pass;
+    }
+    
+    return pass;
+}
+
+function testRemoveTask_Failure_NotFound() {
+    Logger.log("\n--- Test: RemoveTask - Failure Not Found ---");
+    
+    const nonExistentId = "T-DOES-NOT-EXIST-" + Utilities.getUuid();
+    const result = removeTask(nonExistentId);
+    
+    return assertStrictEquals(result, false, "Function should return false for non-existent task ID");
+}
+
+function testRemoveTaskWithEvents_Success_Basic() {
+    Logger.log("\n--- Test: RemoveTaskWithEvents - Success Basic ---");
+    
+    // Create a test task
+    const testTask = addTask({
+        name: "Test Task for Remove With Events",
+        expectTimeSpent: 10
+    });
+    
+    if (!testTask) {
+        Logger.log("❌ Failed to create test task");
+        return false;
+    }
+    
+    // Create events for the task
+    const event1 = addCalendarEvent({
+        name: "Event 1",
+        eventStart: new Date(),
+        eventEnd: new Date(Date.now() + 3600000),
+        parentId: testTask.taskId
+    });
+    
+    const event2 = addCalendarEvent({
+        name: "Event 2",
+        eventStart: new Date(),
+        eventEnd: new Date(Date.now() + 7200000),
+        parentId: testTask.taskId
+    });
+    
+    // Remove the task with its events
+    const result = removeTaskWithEvents(testTask.taskId);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return true for successful removal") && pass;
+    
+    // Verify task and its events are removed
+    pass = assertNull(getTaskById(testTask.taskId), "Task should be removed") && pass;
+    pass = assertNull(getEventById(event1.eventId), "Event 1 should be removed") && pass;
+    pass = assertNull(getEventById(event2.eventId), "Event 2 should be removed") && pass;
+    
+    return pass;
+}
+
+function testRemoveTaskWithEvents_Success_WithChildren() {
+    Logger.log("\n--- Test: RemoveTaskWithEvents - Success With Children ---");
+    
+    // Create a parent task
+    const parentTask = addTask({
+        name: "Parent Task for Remove With Events",
+        expectTimeSpent: 20
+    });
+    
+    if (!parentTask) {
+        Logger.log("❌ Failed to create parent task");
+        return false;
+    }
+    
+    // Create child task
+    const childTask = addTask({
+        name: "Child Task",
+        expectTimeSpent: 10,
+        parentId: parentTask.taskId
+    });
+    
+    // Create events for parent and child
+    const parentEvent = addCalendarEvent({
+        name: "Parent Event",
+        eventStart: new Date(),
+        eventEnd: new Date(Date.now() + 3600000),
+        parentId: parentTask.taskId
+    });
+    
+    const childEvent = addCalendarEvent({
+        name: "Child Event",
+        eventStart: new Date(),
+        eventEnd: new Date(Date.now() + 3600000),
+        parentId: childTask.taskId
+    });
+    
+    // Remove the parent task with its events
+    const result = removeTaskWithEvents(parentTask.taskId);
+    
+    let pass = true;
+    pass = assertTruthy(result, "Function should return true for successful removal") && pass;
+    
+    // Verify parent and its events are removed, but child and its events remain
+    pass = assertNull(getTaskById(parentTask.taskId), "Parent task should be removed") && pass;
+    pass = assertNull(getEventById(parentEvent.eventId), "Parent event should be removed") && pass;
+    
+    // Verify child task and its event still exist
+    const updatedChild = getTaskById(childTask.taskId);
+    const updatedChildEvent = getEventById(childEvent.eventId);
+    
+    pass = assertTruthy(updatedChild, "Child task should still exist") && pass;
+    pass = assertTruthy(updatedChildEvent, "Child event should still exist") && pass;
+    
+    if (updatedChild) pass = assertNull(updatedChild.parentId, "Child task should have no parent") && pass;
+    
+    return pass;
+}
+
+function testRemoveTaskWithEvents_Failure_InvalidTaskId() {
+    Logger.log("\n--- Test: RemoveTaskWithEvents - Failure Invalid TaskId ---");
+    
+    // Test with various invalid IDs
+    const invalidIds = [null, undefined, 123, "", "   ", "invalid-format"];
+    let pass = true;
+    
+    for (const invalidId of invalidIds) {
+        const result = removeTaskWithEvents(invalidId);
+        pass = assertStrictEquals(result, false, `Function should return false for invalid ID: ${invalidId}`) && pass;
+    }
+    
+    return pass;
+}
+
+function testRemoveTaskWithEvents_Failure_NotFound() {
+    Logger.log("\n--- Test: RemoveTaskWithEvents - Failure Not Found ---");
+    
+    const nonExistentId = "T-DOES-NOT-EXIST-" + Utilities.getUuid();
+    const result = removeTaskWithEvents(nonExistentId);
+    
+    return assertStrictEquals(result, false, "Function should return false for non-existent task ID");
+}
+
+
+
+
+
 

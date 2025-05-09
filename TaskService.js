@@ -298,9 +298,9 @@ function updateTask(taskId, updateData) {
             return null;
         }
 
-        // Prevent setting a task as its own parent
+        // Prevent setting a project as its own parent
         if (updateData.parentId === taskId) {
-            Logger.log('Error: A task cannot be its own parent.');
+            Logger.log('Error: A project cannot be its own parent.');
             return null;
         }
 
@@ -383,6 +383,192 @@ function updateTask(taskId, updateData) {
     }
 }
 
+
+// ------------------------------------------------------------------------------------------------
+// Delete functions
+// ------------------------------------------------------------------------------------------------
+
+/**
+ * Deletes a task and all its child tasks (cascade deletion).
+ * Also deletes all associated calendar events.
+ * @param {string} taskId The ID of the task to delete
+ * @return {boolean} True if deletion was successful, false otherwise
+ */
+function deleteTask(taskId) {
+    // Input validation
+    if (!taskId || typeof taskId !== 'string' || taskId.trim() === '') {
+        Logger.log('Error: Invalid taskId provided. It must be a non-empty string.');
+        return false;
+    }
+
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(TASKS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${TASKS_SHEET_NAME}" not found!`);
+        }
+
+        // Get all tasks and events to find children
+        const allTasks = getAllTasks();
+        const allEvents = getAllEvents();
+
+        // Find all child tasks
+        const childTasks = allTasks.filter(t => t.parentId === taskId);
+
+        // Recursively delete all child tasks
+        for (const childTask of childTasks) {
+            deleteTask(childTask.taskId);
+        }
+
+        // Delete all associated calendar events
+        const associatedEvents = allEvents.filter(e => e.parentId === taskId);
+        for (const event of associatedEvents) {
+            deleteEvent(event.eventId);
+        }
+
+        // Find and delete the task itself
+        const data = sheet.getDataRange().getValues();
+        const taskRowIndex = data.slice(1).findIndex(row => row[0] === taskId);
+        
+        if (taskRowIndex === -1) {
+            Logger.log(`Error: Task with ID '${taskId}' not found.`);
+            return false;
+        }
+
+        // Delete the row
+        sheet.deleteRow(taskRowIndex + 2);
+
+        Logger.log(`Task and all its children deleted: ID = ${taskId}`);
+        return true;
+
+    } catch (error) {
+        Logger.log(`Failed to delete task: ${error}`);
+        return false;
+    }
+}
+
+/**
+ * Removes a task while preserving its child tasks.
+ * Updates the parentId of all children to null.
+ * Also removes the parentId from associated calendar events.
+ * @param {string} taskId The ID of the task to remove
+ * @return {boolean} True if removal was successful, false otherwise
+ */
+function removeTask(taskId) {
+    // Input validation
+    if (!taskId || typeof taskId !== 'string' || taskId.trim() === '') {
+        Logger.log('Error: Invalid taskId provided. It must be a non-empty string.');
+        return false;
+    }
+
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(TASKS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${TASKS_SHEET_NAME}" not found!`);
+        }
+
+        // Get all tasks and events to find children
+        const allTasks = getAllTasks();
+        const allEvents = getAllEvents();
+
+        // Find all child tasks
+        const childTasks = allTasks.filter(t => t.parentId === taskId);
+
+        // Update parentId to null for all child tasks
+        for (const childTask of childTasks) {
+            updateTask(childTask.taskId, { parentId: null });
+        }
+
+        // Update parentId to null for all associated calendar events
+        const associatedEvents = allEvents.filter(e => e.parentId === taskId);
+        for (const event of associatedEvents) {
+            updateCalendarEvent(event.eventId, { parentId: null });
+        }
+
+        // Find and delete the task itself
+        const data = sheet.getDataRange().getValues();
+        const taskRowIndex = data.slice(1).findIndex(row => row[0] === taskId);
+        
+        if (taskRowIndex === -1) {
+            Logger.log(`Error: Task with ID '${taskId}' not found.`);
+            return false;
+        }
+
+        // Delete the row
+        sheet.deleteRow(taskRowIndex + 2);
+
+        Logger.log(`Task removed (children preserved): ID = ${taskId}`);
+        return true;
+
+    } catch (error) {
+        Logger.log(`Failed to remove task: ${error}`);
+        return false;
+    }
+}
+
+/**
+ * Removes a task and its associated calendar events, while preserving its child tasks.
+ * Children and their events remain untouched.
+ * @param {string} taskId The ID of the task to remove
+ * @return {boolean} True if removal was successful, false otherwise
+ */
+function removeTaskWithEvents(taskId) {
+    // Input validation
+    if (!taskId || typeof taskId !== 'string' || taskId.trim() === '') {
+        Logger.log('Error: Invalid taskId provided. It must be a non-empty string.');
+        return false;
+    }
+
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(TASKS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${TASKS_SHEET_NAME}" not found!`);
+        }
+
+        // Get all tasks and events to find related items
+        const allTasks = getAllTasks();
+        const allEvents = getAllEvents();
+
+        // Find all child tasks
+        const childTasks = allTasks.filter(t => t.parentId === taskId);
+
+        // Update parentId to null for all child tasks
+        for (const childTask of childTasks) {
+            updateTask(childTask.taskId, { parentId: null });
+        }
+
+        // Delete all associated calendar events
+        const associatedEvents = allEvents.filter(e => e.parentId === taskId);
+        for (const event of associatedEvents) {
+            deleteEvent(event.eventId);
+        }
+
+        // Find and delete the task itself
+        const data = sheet.getDataRange().getValues();
+        const taskRowIndex = data.slice(1).findIndex(row => row[0] === taskId);
+        
+        if (taskRowIndex === -1) {
+            Logger.log(`Error: Task with ID '${taskId}' not found.`);
+            return false;
+        }
+
+        // Delete the row
+        sheet.deleteRow(taskRowIndex + 2);
+
+        Logger.log(`Task and its events removed (children preserved with parentId set to null): ID = ${taskId}`);
+        return true;
+
+    } catch (error) {
+        Logger.log(`Failed to remove task with events: ${error}`);
+        return false;
+    }
+}
+
 // ------------------------------------------------------------------------------------------------
 // Helper functions
 // ------------------------------------------------------------------------------------------------
@@ -396,7 +582,7 @@ function updateTask(taskId, updateData) {
 function rowToTask(row) {
     return {
         taskId: row[0],
-        parentId: row[1],
+        parentId: row[1] === "" ? null : row[1],
         name: row[2],
         description: row[3],
         status: row[4],

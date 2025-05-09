@@ -307,8 +307,50 @@ function updateCalendarEvent(eventId, updateData) {
 }
 
 
+// ------------------------------------------------------------------------------------------------
+// Delete functions
+// ------------------------------------------------------------------------------------------------
 
+/**
+ * Deletes a calendar event.
+ * @param {string} eventId The ID of the event to delete
+ * @return {boolean} True if deletion was successful, false otherwise
+ */
+function deleteEvent(eventId) {
+    // Input validation
+    if (!eventId || typeof eventId !== 'string' || eventId.trim() === '') {
+        Logger.log('Error: Invalid eventId provided. It must be a non-empty string.');
+        return false;
+    }
 
+    try {
+        const ss = SpreadsheetApp.getActiveSpreadsheet();
+        const sheet = ss.getSheetByName(EVENTS_SHEET_NAME);
+        
+        if (!sheet) {
+            throw new Error(`Worksheet "${EVENTS_SHEET_NAME}" not found!`);
+        }
+
+        // Find and delete the event
+        const data = sheet.getDataRange().getValues();
+        const eventRowIndex = data.slice(1).findIndex(row => row[0] === eventId);
+        
+        if (eventRowIndex === -1) {
+            Logger.log(`Error: Event with ID '${eventId}' not found.`);
+            return false;
+        }
+
+        // Delete the row
+        sheet.deleteRow(eventRowIndex + 2);
+
+        Logger.log(`Calendar event deleted: ID = ${eventId}`);
+        return true;
+
+    } catch (error) {
+        Logger.log(`Failed to delete calendar event: ${error}`);
+        return false;
+    }
+}
 
 
 // ------------------------------------------------------------------------------------------------
@@ -324,7 +366,7 @@ function updateCalendarEvent(eventId, updateData) {
 function rowToEvent(row) {
     return {
         eventId: row[0],
-        parentId: row[1],
+        parentId: row[1] === "" ? null : row[1],
         name: row[2],
         description: row[3],
         eventStart: new Date(row[4]),
