@@ -1,0 +1,67 @@
+/* Essentially CSS for the app, Apps Script requires it to have an .html extension to be included this way */
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+  background-color: #f4f4f4;
+}
+h1 {
+  color: #333;
+  text-align: center;
+}
+.container {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+.section-title {
+  color: #555;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+  margin-top: 0;
+}
+label {
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+input[type="text"],
+input[type="datetime-local"],
+input[type="number"], /* Added number type for consistency */
+textarea,
+select {
+  width: calc(100% - 22px); /* Adjusted for padding and border */
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+button {
+  background-color: #007bff;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+button:hover {
+  background-color: #0056b3;
+}
+ul {
+  list-style-type: none;
+  padding: 0;
+}
+li {
+  background-color: #f9f9f9;
+  border: 1px solid #eee;
+  padding: 8px;
+  margin-bottom: 5px;
+  border-radius: 4px;
+}
+.hidden {
+  display: none;
+}

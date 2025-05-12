@@ -1,0 +1,242 @@
+<script>
+// Function to display a status message
+function updateStatus(message, isError = false) {
+  const statusDiv = document.getElementById('statusMessage');
+  statusDiv.textContent = message;
+  statusDiv.style.color = isError ? 'red' : 'green';
+}
+
+// Function to add a new project
+function handleAddProject() {
+  const name = document.getElementById('projectName').value;
+  const description = document.getElementById('projectDescription').value;
+  const expectTimeSpent = document.getElementById('projectExpectTimeSpent').value;
+
+  if (!name || !expectTimeSpent) {
+    updateStatus('Project Name and Expected Time are required!', true);
+    return;
+  }
+  
+  const projectData = {
+    name: name,
+    description: description,
+    expectTimeSpent: parseFloat(expectTimeSpent),
+    status: 'Not yet started'
+  };
+
+  updateStatus('Adding project...');
+  google.script.run
+    .withSuccessHandler(function(response) {
+      if (response.success) {
+        updateStatus('Project added successfully!');
+        document.getElementById('projectName').value = '';
+        document.getElementById('projectDescription').value = '';
+        document.getElementById('projectExpectTimeSpent').value = '';
+        loadProjects();
+      } else {
+        updateStatus('Error adding project: ' + (response.error || 'Unknown error'), true);
+      }
+    })
+    .withFailureHandler(function(error) {
+      updateStatus('Failed to add project: ' + error.message, true);
+    })
+    .doPost({
+      action: 'addProject',
+      projectData: projectData
+    });
+}
+
+// Function to load all projects
+function loadProjects() {
+  const projectsListDiv = document.getElementById('projectsList');
+  projectsListDiv.innerHTML = '<p>Loading projects...</p>';
+
+  google.script.run
+    .withSuccessHandler(function(response) {
+      if (response.success && response.data) {
+        if (response.data.length === 0) {
+          projectsListDiv.innerHTML = '<p>No projects found. Add one!</p>';
+          return;
+        }
+
+        const ul = document.createElement('ul');
+        response.data.forEach(function(project) {
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <strong>${project.name}</strong>
+            ${project.description ? `<br>${project.description}` : ''}
+            <br>Status: ${project.status}
+            <br>Expected Time: ${project.expectTimeSpent}h
+            ${project.totalTimeSpent ? `<br>Time Spent: ${project.totalTimeSpent}h` : ''}
+            <button onclick="loadTasks('${project.projectId}')">View Tasks</button>
+            <button onclick="deleteProject('${project.projectId}')">Delete</button>
+          `;
+          ul.appendChild(li);
+        });
+        projectsListDiv.innerHTML = '';
+        projectsListDiv.appendChild(ul);
+      } else {
+        projectsListDiv.innerHTML = '<p>Error loading projects: ' + (response.error || 'Unknown error') + '</p>';
+      }
+    })
+    .withFailureHandler(function(error) {
+      projectsListDiv.innerHTML = '<p>Failed to load projects: ' + error.message + '</p>';
+    })
+    .doGet({ action: 'getAllProjects' });
+}
+
+// Function to load tasks for a project
+function loadTasks(projectId) {
+  const tasksListDiv = document.getElementById('tasksList');
+  tasksListDiv.innerHTML = '<p>Loading tasks...</p>';
+
+  google.script.run
+    .withSuccessHandler(function(response) {
+      if (response.success && response.data) {
+        const tasks = response.data.filter(task => task.parentId === projectId);
+        if (tasks.length === 0) {
+          tasksListDiv.innerHTML = '<p>No tasks found for this project.</p>';
+          return;
+        }
+
+        const ul = document.createElement('ul');
+        tasks.forEach(function(task) {
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <strong>${task.name}</strong>
+            ${task.description ? `<br>${task.description}` : ''}
+            <br>Status: ${task.status}
+            <br>Expected Time: ${task.expectTimeSpent}h
+            ${task.totalTimeSpent ? `<br>Time Spent: ${task.totalTimeSpent}h` : ''}
+            <button onclick="deleteTask('${task.taskId}')">Delete</button>
+          `;
+          ul.appendChild(li);
+        });
+        tasksListDiv.innerHTML = '';
+        tasksListDiv.appendChild(ul);
+      } else {
+        tasksListDiv.innerHTML = '<p>Error loading tasks: ' + (response.error || 'Unknown error') + '</p>';
+      }
+    })
+    .withFailureHandler(function(error) {
+      tasksListDiv.innerHTML = '<p>Failed to load tasks: ' + error.message + '</p>';
+    })
+    .doGet({ action: 'getAllTasks' });
+}
+
+// Function to load calendar events
+function loadEvents() {
+  const eventsListDiv = document.getElementById('eventsList');
+  eventsListDiv.innerHTML = '<p>Loading events...</p>';
+
+  google.script.run
+    .withSuccessHandler(function(response) {
+      if (response.success && response.data) {
+        if (response.data.length === 0) {
+          eventsListDiv.innerHTML = '<p>No calendar events found.</p>';
+          return;
+        }
+
+        const ul = document.createElement('ul');
+        response.data.forEach(function(event) {
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <strong>${event.name}</strong>
+            ${event.description ? `<br>${event.description}` : ''}
+            <br>Start: ${new Date(event.eventStart).toLocaleString()}
+            <br>End: ${new Date(event.eventEnd).toLocaleString()}
+            <button onclick="deleteEvent('${event.eventId}')">Delete</button>
+          `;
+          ul.appendChild(li);
+        });
+        eventsListDiv.innerHTML = '';
+        eventsListDiv.appendChild(ul);
+      } else {
+        eventsListDiv.innerHTML = '<p>Error loading events: ' + (response.error || 'Unknown error') + '</p>';
+      }
+    })
+    .withFailureHandler(function(error) {
+      eventsListDiv.innerHTML = '<p>Failed to load events: ' + error.message + '</p>';
+    })
+    .doGet({ action: 'getAllEvents' });
+}
+
+// Function to delete a project
+function deleteProject(projectId) {
+  if (!confirm('Are you sure you want to delete this project? This will also delete all associated tasks and events.')) {
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(response) {
+      if (response.success) {
+        updateStatus('Project deleted successfully!');
+        loadProjects();
+        loadTasks(projectId); // Clear tasks list
+      } else {
+        updateStatus('Error deleting project: ' + (response.error || 'Unknown error'), true);
+      }
+    })
+    .withFailureHandler(function(error) {
+      updateStatus('Failed to delete project: ' + error.message, true);
+    })
+    .doPost({
+      action: 'deleteProject',
+      projectId: projectId
+    });
+}
+
+// Function to delete a task
+function deleteTask(taskId) {
+  if (!confirm('Are you sure you want to delete this task?')) {
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(response) {
+      if (response.success) {
+        updateStatus('Task deleted successfully!');
+        loadTasks(response.parentId); // Reload tasks for the parent project
+      } else {
+        updateStatus('Error deleting task: ' + (response.error || 'Unknown error'), true);
+      }
+    })
+    .withFailureHandler(function(error) {
+      updateStatus('Failed to delete task: ' + error.message, true);
+    })
+    .doPost({
+      action: 'deleteTask',
+      taskId: taskId
+    });
+}
+
+// Function to delete an event
+function deleteEvent(eventId) {
+  if (!confirm('Are you sure you want to delete this event?')) {
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(response) {
+      if (response.success) {
+        updateStatus('Event deleted successfully!');
+        loadEvents();
+      } else {
+        updateStatus('Error deleting event: ' + (response.error || 'Unknown error'), true);
+      }
+    })
+    .withFailureHandler(function(error) {
+      updateStatus('Failed to delete event: ' + error.message, true);
+    })
+    .doPost({
+      action: 'deleteEvent',
+      eventId: eventId
+    });
+}
+
+// Load initial data when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+  loadProjects();
+  loadEvents();
+});
+</script> 

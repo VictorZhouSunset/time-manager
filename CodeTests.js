@@ -27,6 +27,27 @@ function runAllGetChildrenAndDescendantsTests() {
     return allTestsPassed;
 }
 
+// Add these tests to the test runner
+function runAllDoGetDoPostTests() {
+    Logger.log("======== RUNNING DOGET/DOPOST TESTS ========");
+    let allTestsPassed = true;
+
+    if (!testDoGet_Home()) allTestsPassed = false;
+    if (!testDoGet_GetAllProjects()) allTestsPassed = false;
+    if (!testDoGet_GetProject()) allTestsPassed = false;
+    if (!testDoPost_AddProject()) allTestsPassed = false;
+    if (!testDoPost_UpdateProject()) allTestsPassed = false;
+    if (!testDoPost_DeleteProject()) allTestsPassed = false;
+
+    Logger.log("======== DOGET/DOPOST TESTS COMPLETE ========");
+    if (allTestsPassed) {
+        Logger.log("🎉🎉🎉 ALL DOGET/DOPOST TESTS PASSED! 🎉🎉🎉");
+    } else {
+        Logger.log("❌❌❌ SOME DOGET/DOPOST TESTS FAILED. Check logs above. ❌❌❌");
+    }
+    return allTestsPassed;
+}
+
 // --- Individual Test Cases ---
 
 // ---------------------------------------------------------------------------------------
@@ -478,3 +499,281 @@ function testGetAllDescendantsByParentId_Failure_InvalidParentId() {
 
     return pass;
 } 
+
+
+// ---------------------------------------------------------------------------------------
+// --- Test Cases for doGet/doPost ---
+// ---------------------------------------------------------------------------------------
+
+function testDoGet_Home() {
+    Logger.log("\n--- Test: doGet - Home ---");
+    
+    // Test the default home action
+    const result = doGet({ parameter: {} });
+    let pass = true;
+
+    // Test that we get an HtmlOutput-like object
+    pass = assertTruthy(result, "Result should not be null") && pass;
+    
+    // Check for methods/properties that HtmlOutput objects have
+    pass = assertTruthy(typeof result.getContent === 'function', "Result should have getContent method") && pass;
+    pass = assertTruthy(typeof result.setTitle === 'function', "Result should have setTitle method") && pass;
+    
+    return pass;
+}
+
+function testDoGet_GetAllProjects() {
+    Logger.log("\n--- Test: doGet - GetAllProjects ---");
+    
+    // Create a test project
+    const testProject = registerTestProject(addProject({ 
+        name: "Test Project for doGet", 
+        expectTimeSpent: 10 
+    }));
+    
+    if (!testProject) {
+        Logger.log("  ❌ FAIL: Failed to create test project");
+        return false;
+    }
+
+    // Test getting all projects
+    const result = doGet({ parameter: { action: 'getAllProjects' } });
+    let pass = true;
+
+    // Parse the JSON response
+    const response = JSON.parse(result.getContent());
+    
+    // Test response structure
+    pass = assertTruthy(response, "Response should not be null") && pass;
+    pass = assertTruthy(response.success, "Response should indicate success") && pass;
+    pass = assertArray(response.data, "Response data should be an array") && pass;
+    pass = assertStrictEquals(response.error, null, "Response error should be null") && pass;
+
+    // Test that our test project is in the results
+    if (response.data.length > 0) {
+        const foundProject = response.data.find(p => p.projectId === testProject.projectId);
+        pass = assertTruthy(foundProject, "Test project should be in results") && pass;
+        if (foundProject) {
+            pass = assertStrictEquals(foundProject.name, testProject.name, "Project name should match") && pass;
+        }
+    }
+
+    return pass;
+}
+
+function testDoGet_GetProject() {
+    Logger.log("\n--- Test: doGet - GetProject ---");
+    
+    // Create a test project
+    const testProject = registerTestProject(addProject({ 
+        name: "Test Project for GetProject", 
+        expectTimeSpent: 10 
+    }));
+    
+    if (!testProject) {
+        Logger.log("  ❌ FAIL: Failed to create test project");
+        return false;
+    }
+
+    // Test getting the project
+    const result = doGet({ parameter: { action: 'getProject', projectId: testProject.projectId } });
+    let pass = true;
+
+    // Parse the JSON response
+    const response = JSON.parse(result.getContent());
+    
+    // Test response structure
+    pass = assertTruthy(response, "Response should not be null") && pass;
+    pass = assertTruthy(response.success, "Response should indicate success") && pass;
+    pass = assertTruthy(response.data, "Response should have data") && pass;
+    pass = assertStrictEquals(response.error, null, "Response error should be null") && pass;
+
+    // Test project data
+    pass = assertStrictEquals(response.data.projectId, testProject.projectId, "Project ID should match") && pass;
+    pass = assertStrictEquals(response.data.name, testProject.name, "Project name should match") && pass;
+
+    // Test getting non-existent project
+    const invalidResult = doGet({ parameter: { action: 'getProject', projectId: 'INVALID-ID' } });
+    const invalidResponse = JSON.parse(invalidResult.getContent());
+    
+    pass = assertTruthy(invalidResponse, "Invalid response should not be null") && pass;
+    pass = assertStrictEquals(invalidResponse.success, false, "Invalid response should indicate failure") && pass;
+    pass = assertStrictEquals(invalidResponse.data, null, "Invalid response should have null data") && pass;
+    pass = assertTruthy(invalidResponse.error, "Invalid response should have error message") && pass;
+
+    return pass;
+}
+
+function testDoPost_AddProject() {
+    Logger.log("\n--- Test: doPost - AddProject ---");
+    
+    // Test adding a project
+    const projectData = {
+        action: 'addProject',
+        projectData: {
+            name: "Test Project for doPost",
+            expectTimeSpent: 10
+        }
+    };
+
+    const result = doPost({ postData: { contents: JSON.stringify(projectData) } });
+    let pass = true;
+
+    // Parse the JSON response
+    const response = JSON.parse(result.getContent());
+    
+    // Test response structure
+    pass = assertTruthy(response, "Response should not be null") && pass;
+    pass = assertTruthy(response.success, "Response should indicate success") && pass;
+    pass = assertTruthy(response.data, "Response should have data") && pass;
+    pass = assertStrictEquals(response.error, null, "Response error should be null") && pass;
+
+    // Test project data
+    pass = assertTruthy(response.data.projectId, "Project should have an ID") && pass;
+    pass = assertStrictEquals(response.data.name, projectData.projectData.name, "Project name should match") && pass;
+    pass = assertStrictEquals(response.data.expectTimeSpent, projectData.projectData.expectTimeSpent, "Expected time should match") && pass;
+
+    // Register the project for cleanup
+    if (response.data) {
+        registerTestProject(response.data);
+    }
+
+    // Test adding invalid project
+    const invalidData = {
+        action: 'addProject',
+        projectData: {
+            // Missing required fields
+        }
+    };
+
+    const invalidResult = doPost({ postData: { contents: JSON.stringify(invalidData) } });
+    const invalidResponse = JSON.parse(invalidResult.getContent());
+    
+    pass = assertTruthy(invalidResponse, "Invalid response should not be null") && pass;
+    pass = assertStrictEquals(invalidResponse.success, false, "Invalid response should indicate failure") && pass;
+    pass = assertStrictEquals(invalidResponse.data, null, "Invalid response should have null data") && pass;
+    pass = assertTruthy(invalidResponse.error, "Invalid response should have error message") && pass;
+
+    return pass;
+}
+
+function testDoPost_UpdateProject() {
+    Logger.log("\n--- Test: doPost - UpdateProject ---");
+    
+    // Create a test project
+    const testProject = registerTestProject(addProject({ 
+        name: "Test Project for Update", 
+        expectTimeSpent: 10 
+    }));
+    
+    if (!testProject) {
+        Logger.log("  ❌ FAIL: Failed to create test project");
+        return false;
+    }
+
+    // Test updating the project
+    const updateData = {
+        action: 'updateProject',
+        projectId: testProject.projectId,
+        updateData: {
+            name: "Updated Project Name",
+            expectTimeSpent: 20
+        }
+    };
+
+    const result = doPost({ postData: { contents: JSON.stringify(updateData) } });
+    let pass = true;
+
+    // Parse the JSON response
+    const response = JSON.parse(result.getContent());
+    
+    // Test response structure
+    pass = assertTruthy(response, "Response should not be null") && pass;
+    pass = assertTruthy(response.success, "Response should indicate success") && pass;
+    pass = assertTruthy(response.data, "Response should have data") && pass;
+    pass = assertStrictEquals(response.error, null, "Response error should be null") && pass;
+
+    // Test updated project data
+    pass = assertStrictEquals(response.data.projectId, testProject.projectId, "Project ID should match") && pass;
+    pass = assertStrictEquals(response.data.name, updateData.updateData.name, "Project name should be updated") && pass;
+    pass = assertStrictEquals(response.data.expectTimeSpent, updateData.updateData.expectTimeSpent, "Expected time should be updated") && pass;
+
+    // Test updating non-existent project
+    const invalidData = {
+        action: 'updateProject',
+        projectId: 'INVALID-ID',
+        updateData: {
+            name: "Invalid Project"
+        }
+    };
+
+    const invalidResult = doPost({ postData: { contents: JSON.stringify(invalidData) } });
+    const invalidResponse = JSON.parse(invalidResult.getContent());
+    
+    pass = assertTruthy(invalidResponse, "Invalid response should not be null") && pass;
+    pass = assertStrictEquals(invalidResponse.success, false, "Invalid response should indicate failure") && pass;
+    pass = assertStrictEquals(invalidResponse.data, null, "Invalid response should have null data") && pass;
+    pass = assertTruthy(invalidResponse.error, "Invalid response should have error message") && pass;
+
+    return pass;
+}
+
+function testDoPost_DeleteProject() {
+    Logger.log("\n--- Test: doPost - DeleteProject ---");
+    
+    // Create a test project
+    const testProject = registerTestProject(addProject({ 
+        name: "Test Project for Delete", 
+        expectTimeSpent: 10 
+    }));
+    
+    if (!testProject) {
+        Logger.log("  ❌ FAIL: Failed to create test project");
+        return false;
+    }
+
+    // Test deleting the project
+    const deleteData = {
+        action: 'deleteProject',
+        projectId: testProject.projectId
+    };
+
+    const result = doPost({ postData: { contents: JSON.stringify(deleteData) } });
+    let pass = true;
+
+    // Parse the JSON response
+    const response = JSON.parse(result.getContent());
+    
+    // Test response structure
+    pass = assertTruthy(response, "Response should not be null") && pass;
+    pass = assertTruthy(response.success, "Response should indicate success") && pass;
+    pass = assertStrictEquals(response.data, null, "Response data should be null") && pass;
+    pass = assertStrictEquals(response.error, null, "Response error should be null") && pass;
+
+    // Verify project is deleted
+    const getResult = doGet({ parameter: { action: 'getProject', projectId: testProject.projectId } });
+    const getResponse = JSON.parse(getResult.getContent());
+    pass = assertStrictEquals(getResponse.success, false, "Project should not exist after deletion") && pass;
+
+    // Test deleting non-existent project
+    const invalidData = {
+        action: 'deleteProject',
+        projectId: 'INVALID-ID'
+    };
+
+    const invalidResult = doPost({ postData: { contents: JSON.stringify(invalidData) } });
+    const invalidResponse = JSON.parse(invalidResult.getContent());
+    
+    pass = assertTruthy(invalidResponse, "Invalid response should not be null") && pass;
+    pass = assertStrictEquals(invalidResponse.success, false, "Invalid response should indicate failure") && pass;
+    pass = assertStrictEquals(invalidResponse.data, null, "Invalid response should have null data") && pass;
+    pass = assertTruthy(invalidResponse.error, "Invalid response should have error message") && pass;
+
+    return pass;
+}
+
+
+
+
+
+
