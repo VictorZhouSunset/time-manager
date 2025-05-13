@@ -109,7 +109,7 @@ function addProject(projectData) {
             status: initialStatus,
             expectTimeSpent: projectData.expectTimeSpent,
             totalTimeSpent: initialTotalTimeSpent,
-            createdAt: createdAt
+            createdAt: createdAt.toISOString()
         };
     
     } catch (error) {
@@ -357,7 +357,7 @@ function updateProject(projectId, updateData) {
             parentId: updateData.hasOwnProperty('parentId') ? updateData.parentId : currentProject.parentId
         };
 
-        // Prepare the updated row data
+        // Prepare the updated row data - using the original Date object for the sheet
         const updatedRow = [
             updatedProject.projectId,
             updatedProject.parentId,
@@ -366,7 +366,7 @@ function updateProject(projectId, updateData) {
             updatedProject.status,
             updatedProject.expectTimeSpent,
             updatedProject.totalTimeSpent,
-            updatedProject.createdAt
+            new Date(updatedProject.createdAt)
         ];
 
         // Update the row in the sheet
@@ -608,6 +608,6 @@ function rowToProject(row) {
         status: row[4],
         expectTimeSpent: row[5],
         totalTimeSpent: row[6],
-        createdAt: new Date(row[7])
+        createdAt: new Date(row[7]).toISOString(),
     };
 }

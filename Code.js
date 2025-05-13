@@ -697,3 +697,213 @@ function getAllDescendantsByParentId(parentId) {
 function include(filename) {
     return HtmlService.createHtmlOutputFromFile(filename).getContent();
   }
+
+
+// ---------------------------------------------------------------------------------------
+// --- Wrapper Functions ---
+// ---------------------------------------------------------------------------------------
+
+// ProjectService Wrapper Functions
+function core_addProject(projectDataFromClient) {
+  try {
+    const newProject = addProject(projectDataFromClient);
+    return { success: true, data: newProject };
+  } catch (e) {
+    Logger.log('Error in addProject: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+function core_getAllProjects() {
+  try {
+    const projects = getAllProjects();
+    return { success: true, data: projects };
+  } catch (e) {
+    Logger.log('Error in getAllProjects: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+
+function core_getProjectById(projectId) {
+  try {
+    const project = getProjectById(projectId);
+    return { success: true, data: project };
+  } catch (e) {
+    Logger.log('Error in getProjectById: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+function core_getProjectsByParentId(parentId) {
+  try {
+    const projects = getProjectsByParentId(parentId);
+    return { success: true, data: projects };
+  } catch (e) {
+    Logger.log('Error in getProjectsByParentId: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+function core_getProjectsByStatus(status) {
+  try {
+    const projects = getProjectsByStatus(status);
+    return { success: true, data: projects };
+  } catch (e) {
+    Logger.log('Error in getProjectsByStatus: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+function core_updateProject(projectId, updateData) {
+  try {
+    const updatedProject = updateProject(projectId, updateData);
+    return { success: true, data: updatedProject };
+  } catch (e) {
+    Logger.log('Error in updateProject: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+function core_deleteProject(projectId) {
+  try {
+    const result = deleteProject(projectId);
+    return { success: result, data: null };
+  } catch (e) {
+    Logger.log('Error in deleteProject: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+// TaskService Wrapper Functions
+function core_addTask(taskDataFromClient) {
+  try {
+    const newTask = addTask(taskDataFromClient);
+    return { success: true, data: newTask };
+  } catch (e) {
+    Logger.log('Error in addTask: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+function core_getAllTasks() {
+  try {
+    const tasks = getAllTasks();
+    return { success: true, data: tasks };
+  } catch (e) {
+    Logger.log('Error in getAllTasks: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+function core_getTaskById(taskId) {
+  try {
+    const task = getTaskById(taskId);
+    return { success: true, data: task };
+  } catch (e) {
+    Logger.log('Error in getTaskById: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+function core_getTasksByParentId(parentId) {
+  try {
+    const tasks = getTasksByParentId(parentId);
+    return { success: true, data: tasks };
+  } catch (e) {
+    Logger.log('Error in getTasksByParentId: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+function core_getTasksByStatus(status) {
+  try {
+    const tasks = getTasksByStatus(status);
+    return { success: true, data: tasks };
+  } catch (e) {
+    Logger.log('Error in getTasksByStatus: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+function core_updateTask(taskId, updateData) {
+  try {
+    const updatedTask = updateTask(taskId, updateData);
+    return { success: true, data: updatedTask };
+  } catch (e) {
+    Logger.log('Error in updateTask: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+function core_deleteTask(taskId) {
+  try {
+    const result = deleteTask(taskId);
+    return { success: result, data: null };
+  } catch (e) {
+    Logger.log('Error in deleteTask: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+// EventService Wrapper Functions
+function core_addCalendarEvent(eventDataFromClient) {
+  try {
+    const newEvent = addCalendarEvent(eventDataFromClient);
+    return { success: true, data: newEvent };
+  } catch (e) {
+    Logger.log('Error in addCalendarEvent: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+function core_getAllEvents() {
+  try {
+    const events = getAllEvents();
+    return { success: true, data: events };
+  } catch (e) {
+    Logger.log('Error in getAllEvents: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+function core_getEventById(eventId) {
+  try {
+    const event = getEventById(eventId);
+    return { success: true, data: event };
+  } catch (e) {
+    Logger.log('Error in getEventById: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+function core_getEventsByParentId(parentId) {
+  try {
+    const events = getEventsByParentId(parentId);
+    return { success: true, data: events };
+  } catch (e) {
+    Logger.log('Error in getEventsByParentId: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+function core_updateCalendarEvent(eventId, updateData) {
+  try {
+    const updatedEvent = updateCalendarEvent(eventId, updateData);
+    return { success: true, data: updatedEvent };
+  } catch (e) {
+    Logger.log('Error in updateCalendarEvent: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+
+function core_deleteEvent(eventId) {
+  try {
+    const result = deleteEvent(eventId);
+    return { success: result, data: null };
+  } catch (e) {
+    Logger.log('Error in deleteEvent: ' + e.toString() + ' Stack: ' + e.stack);
+    return { success: false, error: e.message };
+  }
+}
+

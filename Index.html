@@ -19,7 +19,7 @@
         <h2>Add New Project</h2>
         <form id="projectForm" onsubmit="handleAddProject(); return false;">
           <div class="form-group">
-            <label for="projectName">Project Name:</label>
+            <label for="projectName">Project Name*:</label>
             <input type="text" id="projectName" required>
           </div>
           <div class="form-group">
@@ -27,7 +27,7 @@
             <textarea id="projectDescription"></textarea>
           </div>
           <div class="form-group">
-            <label for="projectExpectTimeSpent">Expected Time (hours):</label>
+            <label for="projectExpectTimeSpent">Expected Time* (hours):</label>
             <input type="number" id="projectExpectTimeSpent" step="0.5" min="0" required>
           </div>
           <button type="submit">Add Project</button>

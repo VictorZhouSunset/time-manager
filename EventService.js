@@ -278,8 +278,8 @@ function updateCalendarEvent(eventId, updateData) {
             ...currentEvent,
             name: updateData.hasOwnProperty('name') ? updateData.name : currentEvent.name,
             description: updateData.hasOwnProperty('description') ? updateData.description : currentEvent.description,
-            eventStart: updateData.hasOwnProperty('eventStart') ? updateData.eventStart : currentEvent.eventStart,
-            eventEnd: updateData.hasOwnProperty('eventEnd') ? updateData.eventEnd : currentEvent.eventEnd,
+            eventStartDate: updateData.hasOwnProperty('eventStart') ? updateData.eventStart : currentEvent.eventStartDate,
+            eventEndDate: updateData.hasOwnProperty('eventEnd') ? updateData.eventEnd : currentEvent.eventEndDate,
             parentId: updateData.hasOwnProperty('parentId') ? updateData.parentId : currentEvent.parentId
         };
 
@@ -289,9 +289,9 @@ function updateCalendarEvent(eventId, updateData) {
             updatedEvent.parentId,
             updatedEvent.name,
             updatedEvent.description,
-            updatedEvent.eventStart,
-            updatedEvent.eventEnd,
-            updatedEvent.createdAt
+            new Date(updatedEvent.eventStartDate),
+            new Date(updatedEvent.eventEndDate),
+            new Date(updatedEvent.createdAt)
         ];
 
         // Update the row in the sheet
@@ -369,8 +369,8 @@ function rowToEvent(row) {
         parentId: row[1] === "" ? null : row[1],
         name: row[2],
         description: row[3],
-        eventStart: new Date(row[4]),
-        eventEnd: new Date(row[5]),
-        createdAt: new Date(row[6])
+        eventStart: new Date(row[4]).toISOString(),
+        eventEnd: new Date(row[5]).toISOString(),
+        createdAt: new Date(row[6]).toISOString(),
     };
 }

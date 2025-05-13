@@ -24,26 +24,28 @@ function handleAddProject() {
     status: 'Not yet started'
   };
 
+  console.log("Adding project with data:", projectData);
   updateStatus('Adding project...');
   google.script.run
     .withSuccessHandler(function(response) {
-      if (response.success) {
+      console.log("Add project response:", response);
+      if (response && response.success) {
+        console.log("Project added successfully:", response.data);
         updateStatus('Project added successfully!');
         document.getElementById('projectName').value = '';
         document.getElementById('projectDescription').value = '';
         document.getElementById('projectExpectTimeSpent').value = '';
         loadProjects();
       } else {
-        updateStatus('Error adding project: ' + (response.error || 'Unknown error'), true);
+        console.log("Error in add project response:", response);
+        updateStatus('Error adding project: ' + (response && response.error ? response.error : 'Unknown error'), true);
       }
     })
     .withFailureHandler(function(error) {
-      updateStatus('Failed to add project: ' + error.message, true);
+      console.error("Failed to add project:", error);
+      updateStatus('Failed to add project: ' + (error ? error.message : 'Unknown error'), true);
     })
-    .doPost({
-      action: 'addProject',
-      projectData: projectData
-    });
+    .core_addProject(projectData);
 }
 
 // Function to load all projects
@@ -53,7 +55,9 @@ function loadProjects() {
 
   google.script.run
     .withSuccessHandler(function(response) {
-      if (response.success && response.data) {
+      console.log("Projects response:", response);
+      if (response && response.success && response.data) {
+        console.log("Projects data:", response.data);
         if (response.data.length === 0) {
           projectsListDiv.innerHTML = '<p>No projects found. Add one!</p>';
           return;
@@ -61,6 +65,7 @@ function loadProjects() {
 
         const ul = document.createElement('ul');
         response.data.forEach(function(project) {
+          console.log("Processing project:", project);
           const li = document.createElement('li');
           li.innerHTML = `
             <strong>${project.name}</strong>
@@ -68,7 +73,7 @@ function loadProjects() {
             <br>Status: ${project.status}
             <br>Expected Time: ${project.expectTimeSpent}h
             ${project.totalTimeSpent ? `<br>Time Spent: ${project.totalTimeSpent}h` : ''}
-            <button onclick="loadTasks('${project.projectId}')">View Tasks</button>
+            <button onclick="loadTasks()">View Tasks</button>
             <button onclick="deleteProject('${project.projectId}')">Delete</button>
           `;
           ul.appendChild(li);
@@ -76,26 +81,29 @@ function loadProjects() {
         projectsListDiv.innerHTML = '';
         projectsListDiv.appendChild(ul);
       } else {
-        projectsListDiv.innerHTML = '<p>Error loading projects: ' + (response.error || 'Unknown error') + '</p>';
+        console.log("Error in projects response:", response);
+        projectsListDiv.innerHTML = '<p>Error loading projects: ' + (response && response.error ? response.error : 'Unknown error') + '</p>';
       }
     })
     .withFailureHandler(function(error) {
-      projectsListDiv.innerHTML = '<p>Failed to load projects: ' + error.message + '</p>';
+      console.error("Failed to load projects:", error);
+      projectsListDiv.innerHTML = '<p>Failed to load projects: ' + (error ? error.message : 'Unknown error') + '</p>';
     })
-    .doGet({ action: 'getAllProjects' });
+    .core_getAllProjects();
 }
 
-// Function to load tasks for a project
-function loadTasks(projectId) {
+// Function to load all tasks
+function loadTasks() {
   const tasksListDiv = document.getElementById('tasksList');
   tasksListDiv.innerHTML = '<p>Loading tasks...</p>';
 
   google.script.run
     .withSuccessHandler(function(response) {
-      if (response.success && response.data) {
-        const tasks = response.data.filter(task => task.parentId === projectId);
+      if (response && response.success && response.data) {
+        const tasks = response.data;
+        
         if (tasks.length === 0) {
-          tasksListDiv.innerHTML = '<p>No tasks found for this project.</p>';
+          tasksListDiv.innerHTML = '<p>No tasks found.</p>';
           return;
         }
 
@@ -115,13 +123,13 @@ function loadTasks(projectId) {
         tasksListDiv.innerHTML = '';
         tasksListDiv.appendChild(ul);
       } else {
-        tasksListDiv.innerHTML = '<p>Error loading tasks: ' + (response.error || 'Unknown error') + '</p>';
+        tasksListDiv.innerHTML = '<p>Error loading tasks: ' + (response && response.error ? response.error : 'Unknown error') + '</p>';
       }
     })
     .withFailureHandler(function(error) {
-      tasksListDiv.innerHTML = '<p>Failed to load tasks: ' + error.message + '</p>';
+      tasksListDiv.innerHTML = '<p>Failed to load tasks: ' + (error ? error.message : 'Unknown error') + '</p>';
     })
-    .doGet({ action: 'getAllTasks' });
+    .core_getAllTasks();
 }
 
 // Function to load calendar events
@@ -131,7 +139,7 @@ function loadEvents() {
 
   google.script.run
     .withSuccessHandler(function(response) {
-      if (response.success && response.data) {
+      if (response && response.success && response.data) {
         if (response.data.length === 0) {
           eventsListDiv.innerHTML = '<p>No calendar events found.</p>';
           return;
@@ -152,13 +160,13 @@ function loadEvents() {
         eventsListDiv.innerHTML = '';
         eventsListDiv.appendChild(ul);
       } else {
-        eventsListDiv.innerHTML = '<p>Error loading events: ' + (response.error || 'Unknown error') + '</p>';
+        eventsListDiv.innerHTML = '<p>Error loading events: ' + (response && response.error ? response.error : 'Unknown error') + '</p>';
       }
     })
     .withFailureHandler(function(error) {
-      eventsListDiv.innerHTML = '<p>Failed to load events: ' + error.message + '</p>';
+      eventsListDiv.innerHTML = '<p>Failed to load events: ' + (error ? error.message : 'Unknown error') + '</p>';
     })
-    .doGet({ action: 'getAllEvents' });
+    .core_getAllEvents();
 }
 
 // Function to delete a project
@@ -169,21 +177,18 @@ function deleteProject(projectId) {
 
   google.script.run
     .withSuccessHandler(function(response) {
-      if (response.success) {
+      if (response && response.success) {
         updateStatus('Project deleted successfully!');
         loadProjects();
-        loadTasks(projectId); // Clear tasks list
+        loadTasks(); // Clear tasks list
       } else {
-        updateStatus('Error deleting project: ' + (response.error || 'Unknown error'), true);
+        updateStatus('Error deleting project: ' + (response && response.error ? response.error : 'Unknown error'), true);
       }
     })
     .withFailureHandler(function(error) {
-      updateStatus('Failed to delete project: ' + error.message, true);
+      updateStatus('Failed to delete project: ' + (error ? error.message : 'Unknown error'), true);
     })
-    .doPost({
-      action: 'deleteProject',
-      projectId: projectId
-    });
+    .core_deleteProject(projectId);
 }
 
 // Function to delete a task
@@ -194,20 +199,17 @@ function deleteTask(taskId) {
 
   google.script.run
     .withSuccessHandler(function(response) {
-      if (response.success) {
+      if (response && response.success) {
         updateStatus('Task deleted successfully!');
-        loadTasks(response.parentId); // Reload tasks for the parent project
+        loadTasks(); // Reload tasks
       } else {
-        updateStatus('Error deleting task: ' + (response.error || 'Unknown error'), true);
+        updateStatus('Error deleting task: ' + (response && response.error ? response.error : 'Unknown error'), true);
       }
     })
     .withFailureHandler(function(error) {
-      updateStatus('Failed to delete task: ' + error.message, true);
+      updateStatus('Failed to delete task: ' + (error ? error.message : 'Unknown error'), true);
     })
-    .doPost({
-      action: 'deleteTask',
-      taskId: taskId
-    });
+    .core_deleteTask(taskId);
 }
 
 // Function to delete an event
@@ -218,25 +220,23 @@ function deleteEvent(eventId) {
 
   google.script.run
     .withSuccessHandler(function(response) {
-      if (response.success) {
+      if (response && response.success) {
         updateStatus('Event deleted successfully!');
         loadEvents();
       } else {
-        updateStatus('Error deleting event: ' + (response.error || 'Unknown error'), true);
+        updateStatus('Error deleting event: ' + (response && response.error ? response.error : 'Unknown error'), true);
       }
     })
     .withFailureHandler(function(error) {
-      updateStatus('Failed to delete event: ' + error.message, true);
+      updateStatus('Failed to delete event: ' + (error ? error.message : 'Unknown error'), true);
     })
-    .doPost({
-      action: 'deleteEvent',
-      eventId: eventId
-    });
+    .core_deleteEvent(eventId);
 }
 
 // Load initial data when the page loads
 document.addEventListener('DOMContentLoaded', function() {
   loadProjects();
+  loadTasks();
   loadEvents();
 });
 </script> 

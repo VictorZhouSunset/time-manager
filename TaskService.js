@@ -368,7 +368,7 @@ function updateTask(taskId, updateData) {
             updatedTask.status,
             updatedTask.expectTimeSpent,
             updatedTask.totalTimeSpent,
-            updatedTask.createdAt
+            new Date(updatedTask.createdAt)
         ];
 
         // Update the row in the sheet
