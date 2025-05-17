@@ -14,45 +14,268 @@
     <div class="container">
       <h1>Time Manager</h1>
       
-      <!-- Project Form -->
-      <div class="section">
-        <h2>Add New Project</h2>
-        <form id="projectForm" onsubmit="handleAddProject(); return false;">
-          <div class="form-group">
-            <label for="projectName">Project Name*:</label>
-            <input type="text" id="projectName" required>
-          </div>
-          <div class="form-group">
-            <label for="projectDescription">Description:</label>
-            <textarea id="projectDescription"></textarea>
-          </div>
-          <div class="form-group">
-            <label for="projectExpectTimeSpent">Expected Time* (hours):</label>
-            <input type="number" id="projectExpectTimeSpent" step="0.5" min="0" required>
-          </div>
-          <button type="submit">Add Project</button>
-        </form>
-      </div>
-
       <!-- Status Message -->
       <div id="statusMessage" class="status-message"></div>
-
-      <!-- Projects List -->
-      <div class="section">
-        <h2>Projects</h2>
-        <div id="projectsList"></div>
+      
+      <!-- Navigation Tabs -->
+      <div class="nav-tabs">
+        <button class="tab-button active" onclick="showPage('projects')">Projects</button>
+        <button class="tab-button" onclick="showPage('tasks')">All Tasks</button>
+        <button class="tab-button" onclick="showPage('events')">All Events</button>
       </div>
 
-      <!-- Tasks List -->
-      <div class="section">
-        <h2>Tasks</h2>
-        <div id="tasksList"></div>
+      <!-- Projects Page -->
+      <div id="projectsPage" class="page active-page">
+        <div class="section">
+          <div class="section-header">
+            <h2>Projects</h2>
+            <button id="addProjectBtn" class="add-button">+ Add Project</button>
+          </div>
+          <div id="projectsList"></div>
+        </div>
+        
+        <!-- We'll keep these divs but hide them, they're used for tracking purposes -->
+        <div id="projectTasksList" style="display: none;"></div>
+        <div id="projectEventsList" style="display: none;"></div>
       </div>
-
-      <!-- Calendar Events -->
-      <div class="section">
-        <h2>Calendar Events</h2>
-        <div id="eventsList"></div>
+      
+      <!-- All Tasks Page -->
+      <div id="tasksPage" class="page">
+        <div class="section">
+          <div class="section-header">
+            <h2>All Tasks</h2>
+            <button id="addTaskBtn" class="add-button">+ Add Task</button>
+          </div>
+          <div id="tasksList"></div>
+        </div>
+      </div>
+      
+      <!-- All Events Page -->
+      <div id="eventsPage" class="page">
+        <div class="section">
+          <div class="section-header">
+            <h2>All Calendar Events</h2>
+            <button id="addEventBtn" class="add-button">+ Add Event</button>
+          </div>
+          <div id="eventsList"></div>
+        </div>
+      </div>
+      
+      <!-- Project Form Modal -->
+      <div id="projectModal" class="modal">
+        <div class="modal-content">
+          <span class="close">&times;</span>
+          <h2>Add New Project</h2>
+          <form id="projectForm">
+            <div class="form-group">
+              <label for="projectName">Project Name*:</label>
+              <input type="text" id="projectName" required>
+            </div>
+            <div class="form-group">
+              <label for="projectDescription">Description:</label>
+              <textarea id="projectDescription"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="projectStatus">Status:</label>
+              <select id="projectStatus">
+                <option value="Not yet started">Not yet started</option>
+                <option value="Ahead of schedule">Ahead of schedule</option>
+                <option value="On track">On track</option>
+                <option value="Behind schedule">Behind schedule</option>
+                <option value="Stuck">Stuck</option>
+                <option value="Paused">Paused</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="projectExpectTimeSpent">Expected Time Needed* (hours):</label>
+              <input type="number" id="projectExpectTimeSpent" step="0.5" min="0" required>
+            </div>
+            <div class="form-group">
+              <label for="projectTotalTimeSpent">Total Time Spent Already (hours):</label>
+              <input type="number" id="projectTotalTimeSpent" step="0.5" min="0" value="0">
+            </div>
+            <button type="submit">Add Project</button>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Update Project Modal -->
+      <div id="updateProjectModal" class="modal">
+        <div class="modal-content">
+          <span class="close">&times;</span>
+          <h2>Update Project</h2>
+          <form id="updateProjectForm">
+            <input type="hidden" id="updateProjectId">
+            <div class="form-group">
+              <label for="updateProjectName">Project Name*:</label>
+              <input type="text" id="updateProjectName" required>
+            </div>
+            <div class="form-group">
+              <label for="updateProjectDescription">Description:</label>
+              <textarea id="updateProjectDescription"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="updateProjectStatus">Status:</label>
+              <select id="updateProjectStatus">
+                <option value="Not yet started">Not yet started</option>
+                <option value="Ahead of schedule">Ahead of schedule</option>
+                <option value="On track">On track</option>
+                <option value="Behind schedule">Behind schedule</option>
+                <option value="Stuck">Stuck</option>
+                <option value="Paused">Paused</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="updateProjectExpectTimeSpent">Expected Time Needed* (hours):</label>
+              <input type="number" id="updateProjectExpectTimeSpent" step="0.5" min="0" required>
+            </div>
+            <div class="form-group">
+              <label for="updateProjectTotalTimeSpent">Total Time Spent Already (hours):</label>
+              <input type="number" id="updateProjectTotalTimeSpent" step="0.5" min="0" value="0">
+            </div>
+            <button type="submit">Update Project</button>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Task Form Modal -->
+      <div id="taskModal" class="modal">
+        <div class="modal-content">
+          <span class="close">&times;</span>
+          <h2>Add New Task</h2>
+          <form id="taskForm">
+            <input type="hidden" id="taskParentId">
+            <div class="form-group">
+              <label for="taskName">Task Name*:</label>
+              <input type="text" id="taskName" required>
+            </div>
+            <div class="form-group">
+              <label for="taskDescription">Description:</label>
+              <textarea id="taskDescription"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="taskStatus">Status:</label>
+              <select id="taskStatus">
+                <option value="Not yet started">Not yet started</option>
+                <option value="Ahead of schedule">Ahead of schedule</option>
+                <option value="On track">On track</option>
+                <option value="Behind schedule">Behind schedule</option>
+                <option value="Stuck">Stuck</option>
+                <option value="Paused">Paused</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="taskExpectTimeSpent">Expected Time Needed* (hours):</label>
+              <input type="number" id="taskExpectTimeSpent" step="0.5" min="0" required>
+            </div>
+            <div class="form-group">
+              <label for="taskTotalTimeSpent">Total Time Spent Already (hours):</label>
+              <input type="number" id="taskTotalTimeSpent" step="0.5" min="0" value="0">
+            </div>
+            <button type="submit">Add Task</button>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Event Form Modal -->
+      <div id="eventModal" class="modal">
+        <div class="modal-content">
+          <span class="close">&times;</span>
+          <h2>Add New Event</h2>
+          <form id="eventForm">
+            <input type="hidden" id="eventParentId">
+            <div class="form-group">
+              <label for="eventName">Event Name*:</label>
+              <input type="text" id="eventName" required>
+            </div>
+            <div class="form-group">
+              <label for="eventDescription">Description:</label>
+              <textarea id="eventDescription"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="eventStart">Start Time*:</label>
+              <input type="datetime-local" id="eventStart" required>
+            </div>
+            <div class="form-group">
+              <label for="eventEnd">End Time*:</label>
+              <input type="datetime-local" id="eventEnd" required>
+            </div>
+            <button type="submit">Add Event</button>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Update Task Modal -->
+      <div id="updateTaskModal" class="modal">
+        <div class="modal-content">
+          <span class="close">&times;</span>
+          <h2>Update Task</h2>
+          <form id="updateTaskForm">
+            <input type="hidden" id="updateTaskId">
+            <input type="hidden" id="updateTaskParentId">
+            <div class="form-group">
+              <label for="updateTaskName">Task Name*:</label>
+              <input type="text" id="updateTaskName" required>
+            </div>
+            <div class="form-group">
+              <label for="updateTaskDescription">Description:</label>
+              <textarea id="updateTaskDescription"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="updateTaskStatus">Status:</label>
+              <select id="updateTaskStatus">
+                <option value="Not yet started">Not yet started</option>
+                <option value="Ahead of schedule">Ahead of schedule</option>
+                <option value="On track">On track</option>
+                <option value="Behind schedule">Behind schedule</option>
+                <option value="Stuck">Stuck</option>
+                <option value="Paused">Paused</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="updateTaskExpectTimeSpent">Expected Time Needed* (hours):</label>
+              <input type="number" id="updateTaskExpectTimeSpent" step="0.5" min="0" required>
+            </div>
+            <div class="form-group">
+              <label for="updateTaskTotalTimeSpent">Total Time Spent Already (hours):</label>
+              <input type="number" id="updateTaskTotalTimeSpent" step="0.5" min="0" value="0">
+            </div>
+            <button type="submit">Update Task</button>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Update Event Modal -->
+      <div id="updateEventModal" class="modal">
+        <div class="modal-content">
+          <span class="close">&times;</span>
+          <h2>Update Event</h2>
+          <form id="updateEventForm">
+            <input type="hidden" id="updateEventId">
+            <input type="hidden" id="updateEventParentId">
+            <div class="form-group">
+              <label for="updateEventName">Event Name*:</label>
+              <input type="text" id="updateEventName" required>
+            </div>
+            <div class="form-group">
+              <label for="updateEventDescription">Description:</label>
+              <textarea id="updateEventDescription"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="updateEventStart">Start Time*:</label>
+              <input type="datetime-local" id="updateEventStart" required>
+            </div>
+            <div class="form-group">
+              <label for="updateEventEnd">End Time*:</label>
+              <input type="datetime-local" id="updateEventEnd" required>
+            </div>
+            <button type="submit">Update Event</button>
+          </form>
+        </div>
       </div>
     </div>
   </body>

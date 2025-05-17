@@ -8,6 +8,11 @@ body {
 h1 {
   color: #333;
   text-align: center;
+  font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif
+}
+h2 {
+  color: #333;
+  font-family: Georgia, 'Times New Roman', Times, serif
 }
 .container {
   background-color: #fff;
@@ -65,5 +70,563 @@ li {
 }
 .hidden {
   display: none;
+}
+
+/* New styles for modal and add button */
+.section-header {
+    font-family: 'Courier New', Courier, monospace;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.add-button {
+  background-color: #28a745;
+  font-size: 14px;
+  padding: 8px 12px;
+}
+
+.add-button:hover {
+  background-color: #218838;
+}
+
+/* Modal styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+  background-color: #fefefe;
+  margin: 10% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  max-width: 500px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+}
+
+/* Table styles for projects */
+.projects-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  table-layout: fixed; /* Ensures fixed column widths */
+}
+
+.projects-table th {
+  background-color: #f2f2f2;
+  padding: 12px 8px;
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 2px solid #ddd;
+}
+
+.projects-table td {
+  padding: 10px 8px;
+  vertical-align: middle;
+  border-bottom: 1px solid #eee;
+  text-align: center;
+}
+
+/* Fixed width columns */
+.status-col {
+  width: 15%;
+  border-right: 1px solid #ddd;
+}
+
+.time-col {
+  width: 20%;
+  border-right: 1px solid #ddd;
+}
+
+.spacer-col {
+  /* Takes up remaining space */
+  border-right: 1px solid #ddd;
+}
+
+.actions-col {
+  width: 30%;
+}
+
+.details-row td {
+  padding: 12px 8px;
+  vertical-align: middle;
+}
+
+/* Project container styles */
+.project-container {
+  margin-bottom: 25px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.project-header {
+  padding: 15px 20px;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #eee;
+}
+
+.project-header h3 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.project-description {
+  margin: 0;
+  color: #666;
+  font-style: italic;
+  white-space: pre-line; /* Preserves line breaks */
+  position: relative;
+  transition: max-height 0.3s ease;
+  overflow: hidden;
+}
+
+.description-collapsed {
+  max-height: 1.35em; /* Show only first line when collapsed */
+}
+
+.toggle-description {
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 11px;
+  cursor: pointer;
+  color: #555;
+  margin-left: 5px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.toggle-description:hover {
+  background-color: #e0e0e0;
+}
+
+/* Add similar styles to other description elements */
+.item-description-header.description-collapsed,
+.desc-col-inline.description-collapsed,
+.inline-description.description-collapsed {
+  max-height: 1.5em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.project-separator {
+  height: 1px;
+  margin: 5px 0;
+  background-color: #f4f4f4;
+}
+
+.action-buttons {
+  text-align: right;
+  vertical-align: middle;
+}
+
+.action-buttons button {
+  margin-right: 5px;
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.action-buttons button:last-child {
+  background-color: #dc3545;
+  margin-right: 0;
+}
+
+.action-buttons button:last-child:hover {
+  background-color: #c82333;
+}
+
+.action-buttons button:first-child {
+  background-color: #17a2b8;
+}
+
+.action-buttons button:first-child:hover {
+  background-color: #138496;
+}
+
+.action-buttons button:nth-child(2) {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.action-buttons button:nth-child(2):hover {
+  background-color: #e0a800;
+}
+
+/* Direct button class styling for more consistent appearance */
+.update-button {
+  background-color: #ffc107 !important;
+  color: #212529 !important;
+}
+
+.update-button:hover {
+  background-color: #e0a800 !important;
+}
+
+.delete-button {
+  background-color: #dc3545 !important;
+  color: white !important;
+}
+
+.delete-button:hover {
+  background-color: #c82333 !important;
+}
+
+/* Navigation tabs */
+.nav-tabs {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #ddd;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  margin-right: 5px;
+  background-color: #f2f2f2;
+  border: 1px solid #ddd;
+  border-bottom: none;
+  border-radius: 5px 5px 0 0;
+  cursor: pointer;
+  font-size: 16px;
+  color: #555;
+}
+
+.tab-button:hover {
+  background-color: #e9e9e9;
+}
+
+.tab-button.active {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+/* Page display */
+.page {
+  display: none;
+}
+
+.active-page {
+  display: block;
+}
+
+/* Info message */
+.info-message {
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 5px;
+  border: 1px dashed #ddd;
+}
+
+/* Time display and progress bar */
+.time-display {
+  margin-bottom: 5px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.progress-container {
+  height: 16px;
+  background-color: #eee;
+  border-radius: 8px;
+  position: relative;
+  overflow: visible;
+  border: 1px solid #ddd;
+}
+
+.progress-bar {
+  height: 100%;
+  position: relative;
+  width: 100%;
+  transition: mask-size 0.5s ease-in-out;
+  border-radius: 6px;
+  overflow: visible;
+}
+
+/* Normal progress bar - red to blue gradient based on progress */
+.progress-bar-normal {
+  background-image: linear-gradient(to right, #e74c3c 0%, #3498db 100%);
+  background-size: 100% 100%; 
+  background-repeat: no-repeat;
+
+  /* CSS Masking */
+  mask-image: linear-gradient(black, black); /* Solid opaque mask shape */
+  mask-repeat: no-repeat;
+  mask-position: left center; /* Align mask to the left */
+}
+
+/* Completed progress bar - full green */
+.progress-bar-completed {
+  background-color: #2ecc71;
+}
+
+/* Stuck progress bar - full red */
+.progress-bar-stuck {
+  background-color: #e74c3c;
+}
+
+.progress-marker {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 3px;
+  background-color: #fff;
+  border-radius: 1px;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+  z-index: 5;
+  pointer-events: none; /* Makes sure it doesn't interfere with clicks */
+}
+
+/* Project details section */
+.project-details {
+  margin: 0 10px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 0 0 8px 8px;
+  border-top: none;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.project-details.hidden {
+  display: none;
+}
+
+.details-section {
+  margin-bottom: 20px;
+}
+
+.details-section h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #ddd;
+  color: #555;
+}
+
+.details-content {
+  padding: 10px;
+  background-color: #fff;
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.details-content ul {
+  margin: 0;
+  padding: 0;
+}
+
+.details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #ddd;
+}
+
+.details-header h4 {
+  margin: 0;
+  color: #555;
+}
+
+.add-small {
+  padding: 4px 8px;
+  font-size: 12px;
+  margin: 0;
+}
+
+/* Details tables for tasks and events */
+.details-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  table-layout: fixed;
+}
+
+.details-table th {
+  background-color: #f2f2f2;
+  padding: 10px 8px;
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 2px solid #ddd;
+  font-size: 14px;
+}
+
+.details-table td {
+  padding: 10px 8px;
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+}
+
+.details-table .data-row:hover {
+  background-color: #f8f8f8;
+}
+
+.name-col {
+  width: 30%;
+  text-align: left !important;
+}
+
+.item-description {
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+  margin-top: 4px;
+  white-space: pre-line; /* Preserves line breaks */
+}
+
+.status-col {
+  width: 15%;
+}
+
+.time-col {
+  width: 25%;
+}
+
+.datetime-col {
+  width: 20%;
+}
+
+.details-table .action-buttons button {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* Item container styles for tasks and events pages */
+.item-container {
+  margin-bottom: 25px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.item-header {
+  padding: 15px 20px;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #eee;
+}
+
+.item-header h3 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.item-description-header {
+  margin: 0;
+  color: #666;
+  font-style: italic;
+  white-space: pre-line; /* Preserves line breaks */
+}
+
+.item-separator {
+  height: 1px;
+  margin: 5px 0;
+  background-color: #f4f4f4;
+}
+
+/* Inline name and description for subtasks and events */
+.name-col-inline {
+  width: 20%;
+  text-align: center !important;
+  border-right: 1px solid #ddd;
+}
+
+.desc-col-inline {
+  width: 30%;
+  text-align: left !important;
+  font-size: 13px;
+  padding: 8px 12px !important;
+  border-right: 1px solid #ddd;
+  white-space: pre-line; /* Preserves line breaks */
+}
+
+/* Style specifically for description text in data rows */
+tr.data-row td.desc-col-inline {
+  font-style: italic;
+  color: #666;
+  font-size: 12px;
+}
+
+.inline-name-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.inline-description {
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+  margin-top: 4px;
+  text-align: center;
+  white-space: pre-line; /* Preserves line breaks */
+}
+
+/* Class for the task description header column specifically */
+.task-desc-header-col {
+  width: 30%; /* Match content column width */
+  /* text-align: center; is inherited from .details-table th */
+  border-right: 1px solid #ddd; 
+}
+
+/* Class for the event description header column specifically */
+.event-desc-header-col {
+  width: 30%; /* Match content column width, assuming .desc-col-inline is 30% */
+  /* text-align: center; is inherited from .details-table th */
+  border-right: 1px solid #ddd; /* Consistent border styling */
+}
+
+.name-col-inline { /* For Event Name and Task Name columns */
+  width: 20%;
+  text-align: center !important;
+  border-right: 1px solid #ddd;
+}
+
+.desc-col-inline { /* For Event Description content and Task Description content */
+  width: 30%;
+  text-align: left !important;
+  font-size: 13px;
+  padding: 8px 12px !important;
+  border-right: 1px solid #ddd;
 }
 </style>

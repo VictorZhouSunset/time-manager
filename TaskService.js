@@ -109,7 +109,7 @@ function addTask(taskData) {
             status: initialStatus,
             expectTimeSpent: taskData.expectTimeSpent,
             totalTimeSpent: initialTotalTimeSpent,
-            createdAt: createdAt
+            createdAt: createdAt.toISOString()
         };
     
     } catch (error) {
@@ -588,6 +588,6 @@ function rowToTask(row) {
         status: row[4],
         expectTimeSpent: row[5],
         totalTimeSpent: row[6],
-        createdAt: new Date(row[7])
+        createdAt: new Date(row[7]).toISOString()
     };
 }

@@ -465,21 +465,96 @@ function doPost(e) {
           })).setMimeType(ContentService.MimeType.JSON);
         }
         
-        // Convert string dates to Date objects
-        if (params.eventData.eventStart && typeof params.eventData.eventStart === 'string') {
-          params.eventData.eventStart = new Date(params.eventData.eventStart);
+        try {
+          // Convert string dates to Date objects with explicit error handling
+          if (params.eventData.eventStart && typeof params.eventData.eventStart === 'string') {
+            try {
+              // Log the original string for debugging
+              Logger.log('Original eventStart string: ' + params.eventData.eventStart);
+              
+              // Try to parse the date string
+              const startDate = new Date(params.eventData.eventStart);
+              
+              // Validate the parsed date
+              if (isNaN(startDate.getTime())) {
+                throw new Error('Invalid start date: ' + params.eventData.eventStart);
+              }
+              
+              params.eventData.eventStart = startDate;
+              Logger.log('Parsed eventStart: ' + startDate);
+            } catch (e) {
+              Logger.log('Error parsing eventStart: ' + e.message);
+              return ContentService.createTextOutput(JSON.stringify({
+                success: false,
+                data: null,
+                error: 'Invalid start date format: ' + e.message
+              })).setMimeType(ContentService.MimeType.JSON);
+            }
+          }
+          
+          if (params.eventData.eventEnd && typeof params.eventData.eventEnd === 'string') {
+            try {
+              // Log the original string for debugging
+              Logger.log('Original eventEnd string: ' + params.eventData.eventEnd);
+              
+              // Try to parse the date string
+              const endDate = new Date(params.eventData.eventEnd);
+              
+              // Validate the parsed date
+              if (isNaN(endDate.getTime())) {
+                throw new Error('Invalid end date: ' + params.eventData.eventEnd);
+              }
+              
+              params.eventData.eventEnd = endDate;
+              Logger.log('Parsed eventEnd: ' + endDate);
+            } catch (e) {
+              Logger.log('Error parsing eventEnd: ' + e.message);
+              return ContentService.createTextOutput(JSON.stringify({
+                success: false,
+                data: null,
+                error: 'Invalid end date format: ' + e.message
+              })).setMimeType(ContentService.MimeType.JSON);
+            }
+          }
+          
+          // Validate that both dates are present
+          if (!params.eventData.eventStart || !params.eventData.eventEnd) {
+            return ContentService.createTextOutput(JSON.stringify({
+              success: false,
+              data: null,
+              error: 'Both eventStart and eventEnd are required'
+            })).setMimeType(ContentService.MimeType.JSON);
+          }
+          
+          // Validate that end is after start
+          if (params.eventData.eventEnd < params.eventData.eventStart) {
+            return ContentService.createTextOutput(JSON.stringify({
+              success: false,
+              data: null,
+              error: 'Event end time cannot be before start time'
+            })).setMimeType(ContentService.MimeType.JSON);
+          }
+          
+          // Add the event with the parsed dates
+          const newEvent = addCalendarEvent(params.eventData);
+          if (!newEvent) {
+            Logger.log('addCalendarEvent returned null');
+          }
+          
+          return ContentService.createTextOutput(JSON.stringify({
+            success: !!newEvent,
+            data: newEvent,
+            error: !newEvent ? 'Failed to add event' : null
+          })).setMimeType(ContentService.MimeType.JSON);
+          
+        } catch (e) {
+          Logger.log('Error in addEvent: ' + e.toString() + ' Stack: ' + e.stack);
+          return ContentService.createTextOutput(JSON.stringify({
+            success: false,
+            data: null,
+            error: 'Server error processing event data: ' + e.message
+          })).setMimeType(ContentService.MimeType.JSON);
         }
-        
-        if (params.eventData.eventEnd && typeof params.eventData.eventEnd === 'string') {
-          params.eventData.eventEnd = new Date(params.eventData.eventEnd);
-        }
-        
-        const newEvent = addCalendarEvent(params.eventData);
-        return ContentService.createTextOutput(JSON.stringify({
-          success: !!newEvent,
-          data: newEvent,
-          error: !newEvent ? 'Failed to add event' : null
-        })).setMimeType(ContentService.MimeType.JSON);
         
       case 'updateEvent':
         if (!params.eventId) {

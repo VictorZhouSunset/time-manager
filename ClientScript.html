@@ -6,11 +6,180 @@ function updateStatus(message, isError = false) {
   statusDiv.style.color = isError ? 'red' : 'green';
 }
 
+// Tab content tracking
+const tabState = {
+  projects: { lastLoaded: null, hasChanges: true },
+  tasks: { lastLoaded: null, hasChanges: true },
+  events: { lastLoaded: null, hasChanges: true }
+};
+
+// Function to mark a tab as having changes (needs to be reloaded)
+function markTabForReload(tabId) {
+  if (tabState[tabId]) {
+    tabState[tabId].hasChanges = true;
+  }
+}
+
+// Mark all tabs for reload
+function markAllTabsForReload() {
+  Object.keys(tabState).forEach(tabId => {
+    tabState[tabId].hasChanges = true;
+  });
+}
+
+// Page navigation
+function showPage(pageId) {
+  console.log(`Switching to ${pageId} tab. Current state:`, JSON.stringify(tabState[pageId]));
+  
+  // Hide all pages
+  document.querySelectorAll('.page').forEach(page => {
+    page.classList.remove('active-page');
+  });
+  
+  // Show the selected page
+  document.getElementById(pageId + 'Page').classList.add('active-page');
+  
+  // Update active tab
+  document.querySelectorAll('.tab-button').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  
+  // Find the button that called this function and make it active
+  const buttons = document.querySelectorAll('.tab-button');
+  for (let i = 0; i < buttons.length; i++) {
+    if (buttons[i].textContent.toLowerCase().includes(pageId.toLowerCase())) {
+      buttons[i].classList.add('active');
+      break;
+    }
+  }
+  
+  // Check if we need to reload the content for this tab
+  const currentTime = new Date().getTime();
+  const needsReload = !tabState[pageId].lastLoaded || 
+                      tabState[pageId].hasChanges || 
+                      (currentTime - tabState[pageId].lastLoaded > 300000); // Force reload after 5 minutes
+  
+  console.log(`Tab ${pageId} needs reload: ${needsReload} (lastLoaded: ${tabState[pageId].lastLoaded}, hasChanges: ${tabState[pageId].hasChanges})`);
+  
+  // Load content for the page only if needed
+  if (needsReload) {
+    if (pageId === 'tasks') {
+      loadAllTasks();
+      tabState.tasks.lastLoaded = currentTime;
+      tabState.tasks.hasChanges = false;
+    } else if (pageId === 'events') {
+      loadAllEvents();
+      tabState.events.lastLoaded = currentTime;
+      tabState.events.hasChanges = false;
+    } else if (pageId === 'projects') {
+      loadProjects();
+      tabState.projects.lastLoaded = currentTime;
+      tabState.projects.hasChanges = false;
+    }
+  } else {
+    updateStatus(`Showing ${pageId} (cached)`);
+    setTimeout(() => {
+      if (document.getElementById('statusMessage').textContent === `Showing ${pageId} (cached)`) {
+        updateStatus('');
+      }
+    }, 1500);
+  }
+}
+
+// Modal handling
+function openProjectModal() {
+  document.getElementById('projectModal').style.display = 'block';
+  
+  // Clear all form data
+  document.getElementById('projectName').value = '';
+  document.getElementById('projectDescription').value = '';
+  document.getElementById('projectExpectTimeSpent').value = '';
+  document.getElementById('projectTotalTimeSpent').value = '0'; // Set this to '0' explicitly
+  document.getElementById('projectStatus').value = 'Not yet started'; // Reset to default status
+}
+
+function closeProjectModal() {
+  document.getElementById('projectModal').style.display = 'none';
+  
+  // Clear form data when closing to ensure a fresh form next time
+  document.getElementById('projectName').value = '';
+  document.getElementById('projectDescription').value = '';
+  document.getElementById('projectExpectTimeSpent').value = '';
+  document.getElementById('projectTotalTimeSpent').value = '0';
+  document.getElementById('projectStatus').value = 'Not yet started';
+}
+
+// Update Project Modal
+function openUpdateProjectModal(project) {
+  document.getElementById('updateProjectModal').style.display = 'block';
+  
+  // Populate form with existing project data
+  document.getElementById('updateProjectId').value = project.projectId;
+  document.getElementById('updateProjectName').value = project.name;
+  document.getElementById('updateProjectDescription').value = project.description || '';
+  document.getElementById('updateProjectStatus').value = project.status;
+  document.getElementById('updateProjectExpectTimeSpent').value = project.expectTimeSpent;
+  document.getElementById('updateProjectTotalTimeSpent').value = project.totalTimeSpent || 0;
+}
+
+function closeUpdateProjectModal() {
+  document.getElementById('updateProjectModal').style.display = 'none';
+}
+
+// Function to handle project update
+function handleUpdateProject() {
+  const projectId = document.getElementById('updateProjectId').value;
+  const name = document.getElementById('updateProjectName').value;
+  const description = document.getElementById('updateProjectDescription').value;
+  const status = document.getElementById('updateProjectStatus').value;
+  const expectTimeSpent = document.getElementById('updateProjectExpectTimeSpent').value;
+  const totalTimeSpent = document.getElementById('updateProjectTotalTimeSpent').value;
+
+  if (!name || !expectTimeSpent) {
+    updateStatus('Project Name and Expected Time are required!', true);
+    return;
+  }
+  
+  const updateData = {
+    name: name,
+    description: description,
+    status: status,
+    expectTimeSpent: parseFloat(expectTimeSpent),
+    totalTimeSpent: parseFloat(totalTimeSpent)
+  };
+
+  console.log("Updating project with data:", updateData);
+  updateStatus('Updating project...');
+  google.script.run
+    .withSuccessHandler(function(response) {
+      console.log("Update project response:", response);
+      if (response && response.success) {
+        console.log("Project updated successfully:", response.data);
+        updateStatus('Project updated successfully!');
+        closeUpdateProjectModal(); // Close the modal on success
+        
+        // Mark relevant tabs for reload and reload if projects is the active tab
+        markAllTabsForReload(); // Update all tabs as project changes can affect tasks/events
+        loadProjects();
+      } else {
+        console.log("Error in update project response:", response);
+        updateStatus('Error updating project: ' + (response && response.error ? response.error : 'Unknown error'), true);
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error("Failed to update project:", error);
+      updateStatus('Failed to update project: ' + (error ? error.message : 'Unknown error'), true);
+    })
+    .core_updateProject(projectId, updateData);
+}
+
 // Function to add a new project
 function handleAddProject() {
   const name = document.getElementById('projectName').value;
   const description = document.getElementById('projectDescription').value;
   const expectTimeSpent = document.getElementById('projectExpectTimeSpent').value;
+  const status = document.getElementById('projectStatus').value;
+  const totalTimeSpent = document.getElementById('projectTotalTimeSpent').value;
 
   if (!name || !expectTimeSpent) {
     updateStatus('Project Name and Expected Time are required!', true);
@@ -21,7 +190,8 @@ function handleAddProject() {
     name: name,
     description: description,
     expectTimeSpent: parseFloat(expectTimeSpent),
-    status: 'Not yet started'
+    totalTimeSpent: parseFloat(totalTimeSpent || 0),
+    status: status || 'Not yet started'
   };
 
   console.log("Adding project with data:", projectData);
@@ -32,9 +202,10 @@ function handleAddProject() {
       if (response && response.success) {
         console.log("Project added successfully:", response.data);
         updateStatus('Project added successfully!');
-        document.getElementById('projectName').value = '';
-        document.getElementById('projectDescription').value = '';
-        document.getElementById('projectExpectTimeSpent').value = '';
+        closeProjectModal(); // Close the modal on success
+        
+        // Mark projects tab for reload and reload if it's the active tab
+        markTabForReload('projects');
         loadProjects();
       } else {
         console.log("Error in add project response:", response);
@@ -60,26 +231,156 @@ function loadProjects() {
         console.log("Projects data:", response.data);
         if (response.data.length === 0) {
           projectsListDiv.innerHTML = '<p>No projects found. Add one!</p>';
+          // Mark the projects tab as loaded even if empty
+          tabState.projects.lastLoaded = new Date().getTime();
+          tabState.projects.hasChanges = false;
           return;
         }
 
-        const ul = document.createElement('ul');
+        // Clear previous content
+        projectsListDiv.innerHTML = '';
+        
+        // Add each project as a separate section
         response.data.forEach(function(project) {
           console.log("Processing project:", project);
-          const li = document.createElement('li');
-          li.innerHTML = `
-            <strong>${project.name}</strong>
-            ${project.description ? `<br>${project.description}` : ''}
-            <br>Status: ${project.status}
-            <br>Expected Time: ${project.expectTimeSpent}h
-            ${project.totalTimeSpent ? `<br>Time Spent: ${project.totalTimeSpent}h` : ''}
-            <button onclick="loadTasks()">View Tasks</button>
-            <button onclick="deleteProject('${project.projectId}')">Delete</button>
+          
+          // Create project container
+          const projectContainer = document.createElement('div');
+          projectContainer.className = 'project-container';
+          projectContainer.id = `project-${project.projectId}`;
+          
+          // Add project name and description above the table
+          const projectHeader = document.createElement('div');
+          projectHeader.className = 'project-header';
+          
+          // Create unique ID for this description
+          const descId = `proj-desc-${project.projectId}`;
+          
+          // Only show toggle button if there's a description with more than one line
+          const hasMultilineDesc = project.description && project.description.includes('\n');
+          const toggleButton = hasMultilineDesc ? 
+            `<button class="toggle-description" data-target="${descId}" onclick="toggleDescription('${descId}')">Show More</button>` : '';
+          
+          projectHeader.innerHTML = `
+            <h3>${project.name}</h3>
+            <div>
+              <p id="${descId}" class="project-description description-collapsed">${project.description || '<em>No description</em>'}</p>
+              ${toggleButton}
+            </div>
           `;
-          ul.appendChild(li);
+          projectContainer.appendChild(projectHeader);
+          
+          // Create table for project details
+          const table = document.createElement('table');
+          table.className = 'projects-table';
+          
+          // Create header row
+          const headerRow = document.createElement('tr');
+          headerRow.innerHTML = `
+            <th class="status-col">Status</th>
+            <th class="time-col">Time Spent / Expected (h)</th>
+            <th class="spacer-col"></th>
+            <th class="actions-col">Actions</th>
+          `;
+          table.appendChild(headerRow);
+          
+          // Calculate progress percentage with safety check for division by zero
+          const timeSpent = project.totalTimeSpent || 0;
+          const expectedTime = project.expectTimeSpent || 1; // Prevent division by zero
+          let progressPercent = Math.min(Math.round((timeSpent / expectedTime) * 100), 100);
+
+          let progressBarClass = 'progress-bar-normal';
+          if (project.status === 'Completed') {
+            progressBarClass = 'progress-bar-completed';
+          } else if (project.status === 'Stuck') {
+            progressBarClass = 'progress-bar-stuck';
+          }
+          
+          // Determine if marker should be shown and log for debugging
+          const shouldShowMarker = (progressPercent > 0 && progressPercent < 100);
+          console.log(`Project "${project.name}" progress: ${timeSpent}/${expectedTime} = ${progressPercent}%`);
+          console.log(`Should show marker for project "${project.name}": ${shouldShowMarker}`);
+          
+          const markerDisplay = (progressPercent > 0 && progressPercent < 100) ? 'block' : 'none';
+          
+          // Create details row
+          const detailsRow = document.createElement('tr');
+          detailsRow.className = 'details-row';
+          detailsRow.innerHTML = `
+            <td class="status-col">${project.status}</td>
+            <td class="time-col">
+              <div class="time-display">${timeSpent}/${expectedTime}</div>
+              <div class="progress-container">
+                <div class="progress-bar ${progressBarClass}" style="mask-size: ${progressPercent}% 100%;" data-progress="${progressPercent}">
+                  <div class="progress-marker" style="left: ${progressPercent}%; display: ${shouldShowMarker ? 'block' : 'none'}; background-color: yellow; opacity: 0.8;"></div>
+                </div>
+              </div>
+            </td>
+            <td class="spacer-col"></td>
+            <td class="action-buttons">
+              <button id="details-btn-${project.projectId}" onclick="toggleProjectDetails('${project.projectId}', '${project.name}')">Show Tasks & Events</button>
+              <button onclick="openUpdateProjectModal(${JSON.stringify(project).replace(/"/g, '&quot;')})">Update</button>
+              <button onclick="deleteProject('${project.projectId}')">Delete</button>
+            </td>
+          `;
+          table.appendChild(detailsRow);
+          
+          // Add table to project container
+          projectContainer.appendChild(table);
+          
+          // Create project details section (initially hidden)
+          const projectDetailsDiv = document.createElement('div');
+          projectDetailsDiv.id = `project-details-${project.projectId}`;
+          projectDetailsDiv.className = 'project-details hidden';
+          
+          // Create tasks section
+          const tasksSection = document.createElement('div');
+          tasksSection.className = 'details-section';
+          tasksSection.innerHTML = `
+            <div class="details-header">
+              <h4>Tasks</h4>
+              <button class="add-button add-small" onclick="openTaskModal('${project.projectId}')">+ Add Subtask</button>
+            </div>
+            <div id="tasks-${project.projectId}" class="details-content">
+              <p class="info-message">Click "Show Tasks & Events" to load tasks</p>
+            </div>
+          `;
+          projectDetailsDiv.appendChild(tasksSection);
+          
+          // Create events section
+          const eventsSection = document.createElement('div');
+          eventsSection.className = 'details-section';
+          eventsSection.innerHTML = `
+            <div class="details-header">
+              <h4>Events</h4>
+              <button class="add-button add-small" onclick="openEventModal('${project.projectId}')">+ Add Event</button>
+            </div>
+            <div id="events-${project.projectId}" class="details-content">
+              <p class="info-message">Click "Show Tasks & Events" to load events</p>
+            </div>
+          `;
+          projectDetailsDiv.appendChild(eventsSection);
+          
+          // Add details section to project container
+          projectContainer.appendChild(projectDetailsDiv);
+          
+          // Add a separator
+          const separator = document.createElement('div');
+          separator.className = 'project-separator';
+          projectContainer.appendChild(separator);
+          
+          // Add the project container to the projects list
+          projectsListDiv.appendChild(projectContainer);
         });
-        projectsListDiv.innerHTML = '';
-        projectsListDiv.appendChild(ul);
+        
+        // Remove the no-longer-needed sections at the bottom of the page
+        document.getElementById('projectTasksList').innerHTML = '';
+        document.getElementById('projectEventsList').innerHTML = '';
+        
+        // Mark the projects tab as loaded
+        tabState.projects.lastLoaded = new Date().getTime();
+        tabState.projects.hasChanges = false;
+        console.log("Projects tab state updated:", JSON.stringify(tabState.projects));
       } else {
         console.log("Error in projects response:", response);
         projectsListDiv.innerHTML = '<p>Error loading projects: ' + (response && response.error ? response.error : 'Unknown error') + '</p>';
@@ -92,10 +393,291 @@ function loadProjects() {
     .core_getAllProjects();
 }
 
-// Function to load all tasks
-function loadTasks() {
+// Function to toggle project details (tasks and events)
+function toggleProjectDetails(projectId, projectName) {
+  const detailsDiv = document.getElementById(`project-details-${projectId}`);
+  const detailsBtn = document.getElementById(`details-btn-${projectId}`);
+  
+  // Check if details are currently hidden
+  const isHidden = detailsDiv.classList.contains('hidden');
+  
+  // First hide all other project details to ensure only one is open at a time
+  document.querySelectorAll('.project-details').forEach(div => {
+    if (div.id !== `project-details-${projectId}`) {
+      div.classList.add('hidden');
+    }
+  });
+  
+  // Reset all other buttons text
+  document.querySelectorAll('[id^="details-btn-"]').forEach(btn => {
+    if (btn.id !== `details-btn-${projectId}`) {
+      btn.textContent = 'View Tasks & Events';
+    }
+  });
+  
+  if (isHidden) {
+    // Show this project's details
+    detailsDiv.classList.remove('hidden');
+    detailsBtn.textContent = 'Hide Tasks & Events';
+    
+    // Load the project's tasks and events
+    loadProjectTasksInline(projectId);
+    loadProjectEventsInline(projectId);
+    
+    // Update status
+    updateStatus(`Viewing details for project: ${projectName}`);
+  } else {
+    // Hide this project's details
+    detailsDiv.classList.add('hidden');
+    detailsBtn.textContent = 'View Tasks & Events';
+    
+    // Clear status
+    updateStatus('');
+  }
+}
+
+// Function to load tasks for a specific project inline
+function loadProjectTasksInline(projectId) {
+  const tasksDiv = document.getElementById(`tasks-${projectId}`);
+  tasksDiv.innerHTML = '<p>Loading tasks...</p>';
+
+  google.script.run
+    .withSuccessHandler(function(response) {
+      if (response && response.success && response.data) {
+        const tasks = response.data;
+        
+        if (tasks.length === 0) {
+          tasksDiv.innerHTML = '<p>No tasks found for this project.</p>';
+          return;
+        }
+
+        // Create a table for tasks
+        const tasksTable = document.createElement('table');
+        tasksTable.className = 'details-table';
+        
+        // Create header row
+        const headerRow = document.createElement('tr');
+        headerRow.innerHTML = `
+          <th class="name-col-inline">Task Name</th>
+          <th class="task-desc-header-col">Description</th>
+          <th class="status-col">Status</th>
+          <th class="time-col">Time Spent / Expected (h)</th>
+          <th class="actions-col">Actions</th>
+        `;
+        tasksTable.appendChild(headerRow);
+        
+        // Add each task as a row
+        tasks.forEach(function(task) {
+          // Calculate progress percentage
+          const timeSpent = task.totalTimeSpent || 0;
+          const expectedTime = task.expectTimeSpent || 1; // Prevent division by zero
+          const actualProgress = (timeSpent / expectedTime) * 100;
+          let progressPercent = Math.min(Math.round(actualProgress), 100);
+          
+          // Log debugging info
+          console.log(`Task "${task.name}" progress: ${timeSpent}/${expectedTime} = ${progressPercent}%`);
+          
+          // Determine if marker should be shown
+          const shouldShowMarker = progressPercent > 0 && progressPercent < 100;
+          console.log(`Should show marker for "${task.name}": ${shouldShowMarker}`);
+          
+          let bgSizeForCSS;
+          if (actualProgress > 0) {
+            bgSizeForCSS = (100 / actualProgress) * 100;
+          } else {
+            if (timeSpent > 0 && expectedTime > 0) {
+              progressPercent = 0.01; 
+              bgSizeForCSS = (100 / progressPercent) * 100;
+              progressPercent = 0; 
+            } else {
+              progressPercent = 0;
+              bgSizeForCSS = 100; 
+            }
+          }
+          
+          // Determine progress bar color based on status
+          let progressBarClass = 'progress-bar-normal';
+          
+          if (task.status === 'Completed') {
+            progressBarClass = 'progress-bar-completed';
+          } else if (task.status === 'Stuck' || task.status === 'Paused') {
+            progressBarClass = 'progress-bar-stuck';
+          }
+          
+          // Create a row for this task's main information
+          const taskRow = document.createElement('tr');
+          taskRow.className = 'data-row task-main-row';
+          
+          // Create name cell with just the name
+          const nameCell = document.createElement('td');
+          nameCell.className = 'name-col-inline';
+          
+          const nameStrong = document.createElement('strong');
+          nameStrong.textContent = task.name;
+          nameCell.appendChild(nameStrong);
+          
+          taskRow.appendChild(nameCell);
+          
+          // Create description cell
+          const descCell = document.createElement('td');
+          descCell.className = 'desc-col-inline';
+          
+          // Create unique ID for this description
+          const descId = `inline-task-desc-${task.taskId}`;
+          
+          if (task.description) {
+            // Create description container with ID for toggling
+            const descContainer = document.createElement('div');
+            descContainer.id = descId;
+            descContainer.className = 'description-collapsed';
+            descContainer.textContent = task.description;
+            descCell.appendChild(descContainer);
+            
+            // Add toggle button if description has multiple lines
+            if (task.description.includes('\n')) {
+              const toggleBtn = document.createElement('button');
+              toggleBtn.className = 'toggle-description';
+              toggleBtn.textContent = 'Show More';
+              toggleBtn.setAttribute('data-target', descId);
+              toggleBtn.onclick = function() { toggleDescription(descId); };
+              descCell.appendChild(toggleBtn);
+            }
+          } else {
+            const noDesc = document.createElement('em');
+            noDesc.textContent = 'No description';
+            descCell.appendChild(noDesc);
+          }
+          
+          taskRow.appendChild(descCell);
+          
+          // Add the rest of the cells
+          taskRow.innerHTML += `
+            <td class="status-col">${task.status}</td>
+            <td class="time-col">
+              <div class="time-display">${timeSpent}/${expectedTime}</div>
+              <div class="progress-container">
+                <div class="progress-bar ${progressBarClass}" style="mask-size: ${progressPercent}% 100%;" data-progress="${progressPercent}">
+                  <div class="progress-marker" style="left: ${progressPercent}%; display: ${shouldShowMarker ? 'block' : 'none'}; background-color: yellow; opacity: 0.8;"></div>
+                </div>
+              </div>
+            </td>
+            <td class="action-buttons">
+              <button class="update-button" onclick="openUpdateTaskModal(${JSON.stringify(task).replace(/"/g, '&quot;')})">Update</button>
+              <button class="delete-button" onclick="deleteTask('${task.taskId}', '${projectId}')">Delete</button>
+            </td>
+          `;
+          
+          // Add the task row to the table
+          tasksTable.appendChild(taskRow);
+        });
+        
+        tasksDiv.innerHTML = '';
+        tasksDiv.appendChild(tasksTable);
+      } else {
+        tasksDiv.innerHTML = '<p>Error loading tasks: ' + (response && response.error ? response.error : 'Unknown error') + '</p>';
+      }
+    })
+    .withFailureHandler(function(error) {
+      tasksDiv.innerHTML = '<p>Failed to load tasks: ' + (error ? error.message : 'Unknown error') + '</p>';
+    })
+    .core_getTasksByParentId(projectId);
+}
+
+// Function to load events for a specific project inline
+function loadProjectEventsInline(projectId) {
+  const eventsDiv = document.getElementById(`events-${projectId}`);
+  eventsDiv.innerHTML = '<p>Loading events...</p>';
+
+  google.script.run
+    .withSuccessHandler(function(response) {
+      if (response && response.success && response.data) {
+        const events = response.data;
+        
+        if (events.length === 0) {
+          eventsDiv.innerHTML = '<p>No events found for this project.</p>';
+          return;
+        }
+
+        // Create a table for events
+        const eventsTable = document.createElement('table');
+        eventsTable.className = 'details-table';
+        
+        // Create header row
+        const headerRow = document.createElement('tr');
+        headerRow.innerHTML = `
+          <th class="name-col-inline">Event Name</th>
+          <th class="event-desc-header-col">Description</th>
+          <th class="datetime-col">Start Time</th>
+          <th class="datetime-col">End Time</th>
+          <th class="actions-col">Actions</th>
+        `;
+        eventsTable.appendChild(headerRow);
+        
+        // Add each event as a row
+        events.forEach(function(event) {
+          // Create a row for this event
+          const eventRow = document.createElement('tr');
+          eventRow.className = 'data-row';
+          
+          // Format dates
+          const startDate = new Date(event.eventStart);
+          const endDate = new Date(event.eventEnd);
+          
+          // Create unique ID for this description
+          const descId = `event-main-desc-${event.eventId}`;
+          
+          // Prepare description with toggle button if needed
+          let descriptionHTML = '';
+          if (event.description) {
+            const hasMultilineDesc = event.description.includes('\n');
+            const toggleButton = hasMultilineDesc ? 
+              `<button class="toggle-description" data-target="${descId}" onclick="toggleDescription('${descId}')">Show More</button>` : '';
+            
+            descriptionHTML = `
+              <td class="desc-col-inline">
+                <div id="${descId}" class="item-description-header description-collapsed">${event.description.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+                ${toggleButton}
+              </td>
+            `;
+          } else {
+            descriptionHTML = `<td class="desc-col-inline"><em>No description</em></td>`;
+          }
+
+          eventRow.innerHTML = `
+            <td class="name-col-inline">
+              <div class="inline-name-container">
+                <div><strong>${event.name}</strong></div>
+                ${event.description ? `<div class="inline-description">${event.description}</div>` : ''}
+              </div>
+            </td>
+            ${descriptionHTML}
+            <td class="datetime-col">${startDate.toLocaleString()}</td>
+            <td class="datetime-col">${endDate.toLocaleString()}</td>
+            <td class="action-buttons">
+              <button class="update-button" onclick="openUpdateEventModal(${JSON.stringify(event).replace(/"/g, '&quot;')})">Update</button>
+              <button class="delete-button" onclick="deleteEvent('${event.eventId}', '${projectId}')">Delete</button>
+            </td>
+          `;
+          
+          eventsTable.appendChild(eventRow);
+        });
+        
+        eventsDiv.innerHTML = '';
+        eventsDiv.appendChild(eventsTable);
+      } else {
+        eventsDiv.innerHTML = '<p>Error loading events: ' + (response && response.error ? response.error : 'Unknown error') + '</p>';
+      }
+    })
+    .withFailureHandler(function(error) {
+      eventsDiv.innerHTML = '<p>Failed to load events: ' + (error ? error.message : 'Unknown error') + '</p>';
+    })
+    .core_getEventsByParentId(projectId);
+}
+
+// Function to load all tasks (separate page)
+function loadAllTasks() {
   const tasksListDiv = document.getElementById('tasksList');
-  tasksListDiv.innerHTML = '<p>Loading tasks...</p>';
+  tasksListDiv.innerHTML = '<p>Loading all tasks...</p>';
 
   google.script.run
     .withSuccessHandler(function(response) {
@@ -104,24 +686,147 @@ function loadTasks() {
         
         if (tasks.length === 0) {
           tasksListDiv.innerHTML = '<p>No tasks found.</p>';
+          // Mark tasks tab as loaded even if empty
+          tabState.tasks.lastLoaded = new Date().getTime();
+          tabState.tasks.hasChanges = false;
           return;
         }
 
-        const ul = document.createElement('ul');
-        tasks.forEach(function(task) {
-          const li = document.createElement('li');
-          li.innerHTML = `
-            <strong>${task.name}</strong>
-            ${task.description ? `<br>${task.description}` : ''}
-            <br>Status: ${task.status}
-            <br>Expected Time: ${task.expectTimeSpent}h
-            ${task.totalTimeSpent ? `<br>Time Spent: ${task.totalTimeSpent}h` : ''}
-            <button onclick="deleteTask('${task.taskId}')">Delete</button>
-          `;
-          ul.appendChild(li);
-        });
+        // Clear the container
         tasksListDiv.innerHTML = '';
-        tasksListDiv.appendChild(ul);
+        
+        // Create individual task containers
+        tasks.forEach(function(task) {
+          // Create task container
+          const taskContainer = document.createElement('div');
+          taskContainer.className = 'item-container';
+          
+          // Add task name and description above the table with safer HTML handling
+          const taskHeader = document.createElement('div');
+          taskHeader.className = 'item-header';
+          
+          const taskTitle = document.createElement('h3');
+          taskTitle.textContent = task.name;
+          taskHeader.appendChild(taskTitle);
+          
+          // Create unique ID for this description
+          const descId = `task-desc-${task.taskId}`;
+          
+          // Create description element
+          const taskDesc = document.createElement('p');
+          taskDesc.className = 'item-description-header description-collapsed';
+          taskDesc.id = descId;
+          
+          if (task.description) {
+            taskDesc.textContent = task.description;
+            
+            // Add toggle button if description has multiple lines
+            if (task.description.includes('\n')) {
+              const toggleBtn = document.createElement('button');
+              toggleBtn.className = 'toggle-description';
+              toggleBtn.textContent = 'Show More';
+              toggleBtn.setAttribute('data-target', descId);
+              toggleBtn.onclick = function() { toggleDescription(descId); };
+              
+              // Create wrapper div for description and toggle
+              const descWrapper = document.createElement('div');
+              descWrapper.appendChild(taskDesc);
+              descWrapper.appendChild(toggleBtn);
+              
+              taskHeader.appendChild(descWrapper);
+            } else {
+              taskHeader.appendChild(taskDesc);
+            }
+          } else {
+            const noDesc = document.createElement('em');
+            noDesc.textContent = 'No description';
+            taskDesc.appendChild(noDesc);
+            taskHeader.appendChild(taskDesc);
+          }
+          
+          taskHeader.appendChild(taskDesc);
+          taskContainer.appendChild(taskHeader);
+          
+          // Create a table for the task details
+          const taskTable = document.createElement('table');
+          taskTable.className = 'details-table';
+          
+          // Calculate progress percentage
+          const timeSpent = task.totalTimeSpent || 0;
+          const expectedTime = task.expectTimeSpent || 1; // Prevent division by zero
+          const actualProgress = (timeSpent / expectedTime) * 100;
+          let progressPercent = Math.min(Math.round(actualProgress), 100);
+          
+          let bgSizeForCSS;
+          if (actualProgress > 0) {
+            bgSizeForCSS = (100 / actualProgress) * 100;
+          } else {
+            if (timeSpent > 0 && expectedTime > 0) {
+              progressPercent = 0.01; 
+              bgSizeForCSS = (100 / progressPercent) * 100;
+              progressPercent = 0; 
+            } else {
+              progressPercent = 0;
+              bgSizeForCSS = 100; 
+            }
+          }
+          
+          // Determine progress bar color based on status
+          let progressBarClass = 'progress-bar-normal';
+          
+          if (task.status === 'Completed') {
+            progressBarClass = 'progress-bar-completed';
+          } else if (task.status === 'Stuck' || task.status === 'Paused') {
+            progressBarClass = 'progress-bar-stuck';
+          }
+          
+          // Create header row
+          const headerRow = document.createElement('tr');
+          headerRow.innerHTML = `
+            <th class="status-col">Status</th>
+            <th class="time-col">Time Spent / Expected (h)</th>
+            <th class="actions-col">Actions</th>
+          `;
+          taskTable.appendChild(headerRow);
+          
+          // Determine if marker should be shown
+          const shouldShowMarker = (progressPercent > 0 && progressPercent < 100);
+          
+          // Create details row
+          const detailsRow = document.createElement('tr');
+          detailsRow.className = 'data-row';
+          detailsRow.innerHTML = `
+            <td class="status-col">${task.status}</td>
+            <td class="time-col">
+              <div class="time-display">${timeSpent}/${expectedTime}</div>
+              <div class="progress-container">
+                <div class="progress-bar ${progressBarClass}" style="mask-size: ${progressPercent}% 100%;" data-progress="${progressPercent}">
+                  <div class="progress-marker" style="left: ${progressPercent}%; display: ${shouldShowMarker ? 'block' : 'none'}; background-color: yellow; opacity: 0.8;"></div>
+                </div>
+              </div>
+            </td>
+            <td class="action-buttons">
+              <button class="update-button" onclick="openUpdateTaskModal(${JSON.stringify(task).replace(/"/g, '&quot;')})">Update</button>
+              <button class="delete-button" onclick="deleteTask('${task.taskId}')">Delete</button>
+            </td>
+          `;
+          
+          taskTable.appendChild(detailsRow);
+          taskContainer.appendChild(taskTable);
+          
+          // Add a separator
+          const separator = document.createElement('div');
+          separator.className = 'item-separator';
+          taskContainer.appendChild(separator);
+          
+          // Add the task container to the tasks list
+          tasksListDiv.appendChild(taskContainer);
+        });
+        
+        // Mark tasks tab as loaded
+        tabState.tasks.lastLoaded = new Date().getTime();
+        tabState.tasks.hasChanges = false;
+        console.log("Tasks tab state updated:", JSON.stringify(tabState.tasks));
       } else {
         tasksListDiv.innerHTML = '<p>Error loading tasks: ' + (response && response.error ? response.error : 'Unknown error') + '</p>';
       }
@@ -132,33 +837,113 @@ function loadTasks() {
     .core_getAllTasks();
 }
 
-// Function to load calendar events
-function loadEvents() {
+// Function to load all calendar events (separate page)
+function loadAllEvents() {
   const eventsListDiv = document.getElementById('eventsList');
-  eventsListDiv.innerHTML = '<p>Loading events...</p>';
+  eventsListDiv.innerHTML = '<p>Loading all events...</p>';
 
   google.script.run
     .withSuccessHandler(function(response) {
       if (response && response.success && response.data) {
         if (response.data.length === 0) {
           eventsListDiv.innerHTML = '<p>No calendar events found.</p>';
+          // Mark events tab as loaded even if empty
+          tabState.events.lastLoaded = new Date().getTime();
+          tabState.events.hasChanges = false;
           return;
         }
 
-        const ul = document.createElement('ul');
-        response.data.forEach(function(event) {
-          const li = document.createElement('li');
-          li.innerHTML = `
-            <strong>${event.name}</strong>
-            ${event.description ? `<br>${event.description}` : ''}
-            <br>Start: ${new Date(event.eventStart).toLocaleString()}
-            <br>End: ${new Date(event.eventEnd).toLocaleString()}
-            <button onclick="deleteEvent('${event.eventId}')">Delete</button>
-          `;
-          ul.appendChild(li);
-        });
+        // Clear the container
         eventsListDiv.innerHTML = '';
-        eventsListDiv.appendChild(ul);
+        
+        // Create individual event containers
+        response.data.forEach(function(event) {
+          // Create event container
+          const eventContainer = document.createElement('div');
+          eventContainer.className = 'item-container';
+          
+          // Add event name and description above the table
+          const eventHeader = document.createElement('div');
+          eventHeader.className = 'item-header';
+          
+          const eventTitle = document.createElement('h3');
+          eventTitle.textContent = event.name;
+          eventHeader.appendChild(eventTitle);
+          
+          const eventDesc = document.createElement('p');
+          eventDesc.className = 'item-description-header';
+          
+          // Create unique ID for this description
+          const descId = `event-main-desc-${event.eventId}`;
+          eventDesc.id = descId;
+          eventDesc.className = 'item-description-header description-collapsed';
+          
+          if (event.description) {
+            eventDesc.textContent = event.description;
+            
+            // Add toggle button if description has multiple lines
+            if (event.description.includes('\n')) {
+              const toggleBtn = document.createElement('button');
+              toggleBtn.className = 'toggle-description';
+              toggleBtn.textContent = 'Show More';
+              toggleBtn.setAttribute('data-target', descId);
+              toggleBtn.onclick = function() { toggleDescription(descId); };
+              eventHeader.appendChild(toggleBtn);
+            }
+          } else {
+            const noDesc = document.createElement('em');
+            noDesc.textContent = 'No description';
+            eventDesc.appendChild(noDesc);
+          }
+          
+          eventHeader.appendChild(eventDesc);
+          eventContainer.appendChild(eventHeader);
+          
+          // Format dates
+          const startDate = new Date(event.eventStart);
+          const endDate = new Date(event.eventEnd);
+          
+          // Create a table for the event details
+          const eventTable = document.createElement('table');
+          eventTable.className = 'details-table';
+          
+          // Create header row
+          const headerRow = document.createElement('tr');
+          headerRow.innerHTML = `
+            <th class="datetime-col">Start Time</th>
+            <th class="datetime-col">End Time</th>
+            <th class="actions-col">Actions</th>
+          `;
+          eventTable.appendChild(headerRow);
+          
+          // Create details row
+          const detailsRow = document.createElement('tr');
+          detailsRow.className = 'data-row';
+          detailsRow.innerHTML = `
+            <td class="datetime-col">${startDate.toLocaleString()}</td>
+            <td class="datetime-col">${endDate.toLocaleString()}</td>
+            <td class="action-buttons">
+              <button class="update-button" onclick="openUpdateEventModal(${JSON.stringify(event).replace(/"/g, '&quot;')})">Update</button>
+              <button class="delete-button" onclick="deleteEvent('${event.eventId}')">Delete</button>
+            </td>
+          `;
+          
+          eventTable.appendChild(detailsRow);
+          eventContainer.appendChild(eventTable);
+          
+          // Add a separator
+          const separator = document.createElement('div');
+          separator.className = 'item-separator';
+          eventContainer.appendChild(separator);
+          
+          // Add the event container to the events list
+          eventsListDiv.appendChild(eventContainer);
+        });
+        
+        // Mark events tab as loaded
+        tabState.events.lastLoaded = new Date().getTime();
+        tabState.events.hasChanges = false;
+        console.log("Events tab state updated:", JSON.stringify(tabState.events));
       } else {
         eventsListDiv.innerHTML = '<p>Error loading events: ' + (response && response.error ? response.error : 'Unknown error') + '</p>';
       }
@@ -169,7 +954,7 @@ function loadEvents() {
     .core_getAllEvents();
 }
 
-// Function to delete a project
+// Function to delete a project (updated to clean up any open details)
 function deleteProject(projectId) {
   if (!confirm('Are you sure you want to delete this project? This will also delete all associated tasks and events.')) {
     return;
@@ -179,8 +964,10 @@ function deleteProject(projectId) {
     .withSuccessHandler(function(response) {
       if (response && response.success) {
         updateStatus('Project deleted successfully!');
+        
+        // Mark all tabs for reload and reload projects if it's the active tab
+        markAllTabsForReload();
         loadProjects();
-        loadTasks(); // Clear tasks list
       } else {
         updateStatus('Error deleting project: ' + (response && response.error ? response.error : 'Unknown error'), true);
       }
@@ -192,7 +979,7 @@ function deleteProject(projectId) {
 }
 
 // Function to delete a task
-function deleteTask(taskId) {
+function deleteTask(taskId, projectId) {
   if (!confirm('Are you sure you want to delete this task?')) {
     return;
   }
@@ -201,7 +988,20 @@ function deleteTask(taskId) {
     .withSuccessHandler(function(response) {
       if (response && response.success) {
         updateStatus('Task deleted successfully!');
-        loadTasks(); // Reload tasks
+        
+        // Mark tasks tab for reload
+        markTabForReload('tasks');
+        
+        // Refresh the appropriate view
+        if (projectId && document.getElementById(`tasks-${projectId}`)) {
+          // If within a project view, mark projects tab for reload
+          markTabForReload('projects');
+          // Refresh the inline project tasks view
+          loadProjectTasksInline(projectId);
+        } else if (document.getElementById('tasksPage').classList.contains('active-page')) {
+          // Refresh the all tasks page
+          loadAllTasks();
+        }
       } else {
         updateStatus('Error deleting task: ' + (response && response.error ? response.error : 'Unknown error'), true);
       }
@@ -213,7 +1013,7 @@ function deleteTask(taskId) {
 }
 
 // Function to delete an event
-function deleteEvent(eventId) {
+function deleteEvent(eventId, projectId) {
   if (!confirm('Are you sure you want to delete this event?')) {
     return;
   }
@@ -222,7 +1022,20 @@ function deleteEvent(eventId) {
     .withSuccessHandler(function(response) {
       if (response && response.success) {
         updateStatus('Event deleted successfully!');
-        loadEvents();
+        
+        // Mark events tab for reload
+        markTabForReload('events');
+        
+        // Refresh the appropriate view
+        if (projectId) {
+          // If within a project view, mark projects tab for reload
+          markTabForReload('projects');
+          // Refresh the inline project events view
+          loadProjectEventsInline(projectId);
+        } else if (document.getElementById('eventsPage').classList.contains('active-page')) {
+          // Refresh the all events page
+          loadAllEvents();
+        }
       } else {
         updateStatus('Error deleting event: ' + (response && response.error ? response.error : 'Unknown error'), true);
       }
@@ -233,10 +1046,534 @@ function deleteEvent(eventId) {
     .core_deleteEvent(eventId);
 }
 
-// Load initial data when the page loads
+// Task Modal handling
+function openTaskModal(parentId) {
+  const modal = document.getElementById('taskModal');
+  modal.style.display = 'block';
+  
+  // Set the parent ID
+  document.getElementById('taskParentId').value = parentId;
+  
+  // Clear previous form data
+  document.getElementById('taskName').value = '';
+  document.getElementById('taskDescription').value = '';
+  document.getElementById('taskExpectTimeSpent').value = '';
+  document.getElementById('taskTotalTimeSpent').value = '0';
+  document.getElementById('taskStatus').value = 'Not yet started';
+}
+
+function closeTaskModal() {
+  document.getElementById('taskModal').style.display = 'none';
+}
+
+// Event Modal handling
+function openEventModal(parentId) {
+  try {
+    console.log("Opening event modal with parentId:", parentId);
+    const modal = document.getElementById('eventModal');
+    if (!modal) {
+      console.error("Event modal element not found!");
+      return;
+    }
+    
+    modal.style.display = 'block';
+    
+    // Set the parent ID
+    const parentIdField = document.getElementById('eventParentId');
+    if (!parentIdField) {
+      console.error("eventParentId field not found!");
+      return;
+    }
+    parentIdField.value = parentId || '';
+    
+    // Clear previous form data
+    document.getElementById('eventName').value = '';
+    document.getElementById('eventDescription').value = '';
+    
+    // Create dates using Los Angeles time zone
+    const formatOptions = { timeZone: 'America/Los_Angeles' };
+    const nowLA = new Date(new Date().toLocaleString('en-US', formatOptions));
+    const twoHoursLater = new Date(nowLA);
+    twoHoursLater.setHours(nowLA.getHours() + 2);
+    console.log("Current date in Los Angeles:", nowLA);
+    console.log("Two hours later in Los Angeles:", twoHoursLater);
+    
+    // Format for datetime-local input (YYYY-MM-DDThh:mm)
+    const formatDate = (date) => {
+      // Create a string in the format YYYY-MM-DDThh:mm that keeps local time
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+    
+    const eventStartField = document.getElementById('eventStart');
+    const eventEndField = document.getElementById('eventEnd');
+    
+    if (eventStartField) eventStartField.value = formatDate(nowLA);
+    if (eventEndField) eventEndField.value = formatDate(twoHoursLater);
+    console.log("Event start field value:", eventStartField.value);
+    console.log("Event end field value:", eventEndField.value);
+    
+    console.log("Event modal opened successfully");
+  } catch (error) {
+    console.error("Error opening event modal:", error);
+    updateStatus('Error opening event form. Please try again.', true);
+  }
+}
+
+function closeEventModal() {
+  try {
+    console.log("Closing event modal");
+    const modal = document.getElementById('eventModal');
+    if (!modal) {
+      console.error("Event modal element not found!");
+      return;
+    }
+    modal.style.display = 'none';
+    console.log("Event modal closed successfully");
+  } catch (error) {
+    console.error("Error closing event modal:", error);
+  }
+}
+
+// Function to handle adding a new task
+function handleAddTask() {
+  const parentId = document.getElementById('taskParentId').value;
+  const name = document.getElementById('taskName').value;
+  const description = document.getElementById('taskDescription').value;
+  const status = document.getElementById('taskStatus').value;
+  const expectTimeSpent = document.getElementById('taskExpectTimeSpent').value;
+  const totalTimeSpent = document.getElementById('taskTotalTimeSpent').value;
+
+  if (!name || !expectTimeSpent) {
+    updateStatus('Task Name and Expected Time are required!', true);
+    return;
+  }
+  
+  const taskData = {
+    name: name,
+    description: description,
+    parentId: parentId,
+    status: status,
+    expectTimeSpent: parseFloat(expectTimeSpent),
+    totalTimeSpent: parseFloat(totalTimeSpent || 0)
+  };
+
+  console.log("Adding task with data:", taskData);
+  updateStatus('Adding task...');
+  google.script.run
+    .withSuccessHandler(function(response) {
+      console.log("Add task response:", response);
+      if (response && response.success) {
+        console.log("Task added successfully:", response.data);
+        updateStatus('Task added successfully!');
+        closeTaskModal(); // Close the modal on success
+        
+        // Mark tasks tab for reload
+        markTabForReload('tasks');
+        
+        // Refresh the tasks list for this project
+        loadProjectTasksInline(parentId);
+      } else {
+        console.log("Error in add task response:", response);
+        updateStatus('Error adding task: ' + (response && response.error ? response.error : 'Unknown error'), true);
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error("Failed to add task:", error);
+      updateStatus('Failed to add task: ' + (error ? error.message : 'Unknown error'), true);
+    })
+    .core_addTask(taskData);
+}
+
+// Function to handle adding a new event
+function handleAddEvent() {
+  try {
+    const parentId = document.getElementById('eventParentId').value;
+    const name = document.getElementById('eventName').value;
+    const description = document.getElementById('eventDescription').value;
+    const eventStartStr = document.getElementById('eventStart').value;
+    const eventEndStr = document.getElementById('eventEnd').value;
+
+    console.log("Form values:", { parentId, name, description, eventStartStr, eventEndStr });
+
+    if (!name || !eventStartStr || !eventEndStr) {
+      updateStatus('Event Name, Start Time, and End Time are required!', true);
+      return;
+    }
+    
+    // Parse date strings to Date objects - force browser parsing with new Date()
+    // The datetime-local input produces strings like: "2025-05-15T16:40"
+    const startDate = new Date(eventStartStr);
+    const endDate = new Date(eventEndStr);
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      updateStatus('Invalid date format. Please use the datetime picker.', true);
+      return;
+    }
+    
+    if (endDate <= startDate) {
+      updateStatus('End time must be after start time!', true);
+      return;
+    }
+    
+    // Try a simpler approach with direct plain objects instead of Date objects
+    // This creates a simple object structure that should be easier to serialize
+    const eventData = {
+      name: name,
+      description: description,
+      parentId: parentId && parentId.trim() !== '' ? parentId : null,
+      // Using string values directly - let server handle the conversion
+      eventStart: startDate.toISOString(),
+      eventEnd: endDate.toISOString()
+    };
+
+    console.log("Adding event with data:", eventData);
+    updateStatus('Adding event...');
+    
+    google.script.run
+      .withSuccessHandler(function(response) {
+        console.log("Add event response:", response);
+        if (response && response.success) {
+          console.log("Event added successfully:", response.data);
+          updateStatus('Event added successfully!');
+          closeEventModal(); // Close the modal on success
+          
+          // Mark events tab for reload
+          markTabForReload('events');
+          
+          // Refresh the events list immediately to confirm the event was added
+          if (parentId && parentId.trim() !== '') {
+            // If event is added to a project, refresh that project's events
+            loadProjectEventsInline(parentId);
+          } else {
+            // If added from the Events tab, reload all events
+            loadAllEvents();
+          }
+        } else {
+          console.log("Error in add event response:", response);
+          updateStatus('Error adding event: ' + (response && response.error ? response.error : 'Unknown error'), true);
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error("Failed to add event:", error);
+        updateStatus('Failed to add event: ' + (error ? error.message : 'Unknown error'), true);
+      })
+      .core_addCalendarEvent(eventData);
+  } catch (error) {
+    console.error("Exception in handleAddEvent:", error);
+    updateStatus('Error processing event form: ' + error.message, true);
+  }
+}
+
+// Function to handle updating a task
+function handleUpdateTask() {
+  const taskId = document.getElementById('updateTaskId').value;
+  const name = document.getElementById('updateTaskName').value;
+  const description = document.getElementById('updateTaskDescription').value;
+  const status = document.getElementById('updateTaskStatus').value;
+  const expectTimeSpent = document.getElementById('updateTaskExpectTimeSpent').value;
+  const totalTimeSpent = document.getElementById('updateTaskTotalTimeSpent').value;
+  const parentId = document.getElementById('updateTaskParentId').value;
+
+  if (!name || !expectTimeSpent) {
+    updateStatus('Task Name and Expected Time are required!', true);
+    return;
+  }
+  
+  const updateData = {
+    name: name,
+    description: description,
+    status: status,
+    expectTimeSpent: parseFloat(expectTimeSpent),
+    totalTimeSpent: parseFloat(totalTimeSpent || 0)
+  };
+
+  console.log("Updating task with data:", updateData);
+  updateStatus('Updating task...');
+  google.script.run
+    .withSuccessHandler(function(response) {
+      console.log("Update task response:", response);
+      if (response && response.success) {
+        console.log("Task updated successfully:", response.data);
+        updateStatus('Task updated successfully!');
+        closeUpdateTaskModal(); // Close the modal on success
+        
+        // Mark tasks tab for reload
+        markTabForReload('tasks');
+        
+        // Refresh the tasks list based on context
+        if (parentId) {
+          // If the task is a subtask of a project, mark projects tab for reload
+          markTabForReload('projects');
+          // Refresh project tasks
+          loadProjectTasksInline(parentId);
+        } else {
+          // If on all tasks view, refresh all tasks
+          loadAllTasks();
+        }
+      } else {
+        console.log("Error in update task response:", response);
+        updateStatus('Error updating task: ' + (response && response.error ? response.error : 'Unknown error'), true);
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error("Failed to update task:", error);
+      updateStatus('Failed to update task: ' + (error ? error.message : 'Unknown error'), true);
+    })
+    .core_updateTask(taskId, updateData);
+}
+
+// Update Task Modal handling
+function openUpdateTaskModal(task) {
+  const modal = document.getElementById('updateTaskModal');
+  modal.style.display = 'block';
+  
+  // Populate form with existing task data
+  document.getElementById('updateTaskId').value = task.taskId;
+  document.getElementById('updateTaskName').value = task.name;
+  document.getElementById('updateTaskDescription').value = task.description || '';
+  document.getElementById('updateTaskStatus').value = task.status;
+  document.getElementById('updateTaskExpectTimeSpent').value = task.expectTimeSpent;
+  document.getElementById('updateTaskTotalTimeSpent').value = task.totalTimeSpent || 0;
+  document.getElementById('updateTaskParentId').value = task.parentId || '';
+}
+
+function closeUpdateTaskModal() {
+  document.getElementById('updateTaskModal').style.display = 'none';
+}
+
+// Function to open the update event modal
+function openUpdateEventModal(event) {
+  const modal = document.getElementById('updateEventModal');
+  modal.style.display = 'block';
+  
+  // Populate form with existing event data
+  document.getElementById('updateEventId').value = event.eventId;
+  document.getElementById('updateEventName').value = event.name;
+  document.getElementById('updateEventDescription').value = event.description || '';
+  document.getElementById('updateEventParentId').value = event.parentId || '';
+  
+  // Format for datetime-local input (YYYY-MM-DDThh:mm)
+  const formatDate = (isoString) => {
+    // Parse the ISO string to a date and format it to local datetime-local format
+    const date = new Date(isoString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+  
+  // Set the start and end time values
+  document.getElementById('updateEventStart').value = formatDate(event.eventStart);
+  document.getElementById('updateEventEnd').value = formatDate(event.eventEnd);
+}
+
+function closeUpdateEventModal() {
+  document.getElementById('updateEventModal').style.display = 'none';
+}
+
+// Function to handle event updates
+function handleUpdateEvent() {
+  try {
+    const eventId = document.getElementById('updateEventId').value;
+    const name = document.getElementById('updateEventName').value;
+    const description = document.getElementById('updateEventDescription').value;
+    const parentId = document.getElementById('updateEventParentId').value;
+    const eventStartStr = document.getElementById('updateEventStart').value;
+    const eventEndStr = document.getElementById('updateEventEnd').value;
+
+    console.log("Update event form values:", { eventId, name, description, eventStartStr, eventEndStr });
+
+    if (!name || !eventStartStr || !eventEndStr) {
+      updateStatus('Event Name, Start Time, and End Time are required!', true);
+      return;
+    }
+    
+    // Parse date strings to Date objects
+    const startDate = new Date(eventStartStr);
+    const endDate = new Date(eventEndStr);
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      updateStatus('Invalid date format. Please use the datetime picker.', true);
+      return;
+    }
+    
+    if (endDate <= startDate) {
+      updateStatus('End time must be after start time!', true);
+      return;
+    }
+    
+    // Create the update data object
+    const updateData = {
+      name: name,
+      description: description,
+      eventStart: startDate.toISOString(),
+      eventEnd: endDate.toISOString(),
+      parentId: parentId && parentId.trim() !== '' ? parentId : null
+    };
+
+    console.log("Updating event with data:", updateData);
+    updateStatus('Updating event...');
+    
+    google.script.run
+      .withSuccessHandler(function(response) {
+        console.log("Update event response:", response);
+        if (response && response.success) {
+          console.log("Event updated successfully:", response.data);
+          updateStatus('Event updated successfully!');
+          closeUpdateEventModal(); // Close the modal on success
+          
+          // Mark events tab for reload
+          markTabForReload('events');
+          
+          // Refresh the events list
+          if (parentId && parentId.trim() !== '') {
+            // If event belongs to a project, refresh that project's events
+            loadProjectEventsInline(parentId);
+          } else {
+            // If on all events view, reload all events
+            loadAllEvents();
+          }
+        } else {
+          console.log("Error in update event response:", response);
+          updateStatus('Error updating event: ' + (response && response.error ? response.error : 'Unknown error'), true);
+        }
+      })
+      .withFailureHandler(function(error) {
+        console.error("Failed to update event:", error);
+        updateStatus('Failed to update event: ' + (error ? error.message : 'Unknown error'), true);
+      })
+      .core_updateCalendarEvent(eventId, updateData);
+  } catch (error) {
+    console.error("Exception in handleUpdateEvent:", error);
+    updateStatus('Error processing event update: ' + error.message, true);
+  }
+}
+
+// Function to toggle description visibility
+function toggleDescription(descId) {
+  const descElement = document.getElementById(descId);
+  if (descElement) {
+    descElement.classList.toggle('description-collapsed');
+    
+    // Find the toggle button and update its text
+    const toggleBtn = document.querySelector(`[data-target="${descId}"]`);
+    if (toggleBtn) {
+      toggleBtn.textContent = descElement.classList.contains('description-collapsed') ? 'Show More' : 'Show Less';
+    }
+  }
+}
+
+// Initialize event listeners and load data when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
+  // Button to open the project modal
+  document.getElementById('addProjectBtn').addEventListener('click', openProjectModal);
+  
+  // Button to open the task modal
+  document.getElementById('addTaskBtn').addEventListener('click', function() {
+    openTaskModal('');
+  });
+  
+  // Button to open the event modal
+  document.getElementById('addEventBtn').addEventListener('click', function() {
+    openEventModal('');
+  });
+  
+  // Event form submission handling
+  document.getElementById('projectForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    handleAddProject();
+    return false;
+  });
+  
+  document.getElementById('updateProjectForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    handleUpdateProject();
+    return false;
+  });
+  
+  document.getElementById('taskForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    handleAddTask();
+    return false;
+  });
+  
+  document.getElementById('updateTaskForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    handleUpdateTask();
+    return false;
+  });
+  
+  document.getElementById('eventForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    handleAddEvent();
+    return false;
+  });
+  
+  document.getElementById('updateEventForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    handleUpdateEvent();
+    return false;
+  });
+  
+  // Close modal when clicking the X button
+  document.querySelectorAll('.close').forEach(closeBtn => {
+    closeBtn.addEventListener('click', function() {
+      const modal = this.closest('.modal');
+      if (modal.id === 'projectModal') {
+        closeProjectModal();
+      } else if (modal.id === 'updateProjectModal') {
+        closeUpdateProjectModal();
+      } else if (modal.id === 'taskModal') {
+        closeTaskModal();
+      } else if (modal.id === 'eventModal') {
+        closeEventModal();
+      } else if (modal.id === 'updateTaskModal') {
+        closeUpdateTaskModal();
+      }
+    });
+  });
+  
+  // Close modal when clicking outside of it
+  window.addEventListener('click', function(event) {
+    const projectModal = document.getElementById('projectModal');
+    if (event.target === projectModal) {
+      closeProjectModal();
+    }
+    
+    const updateModal = document.getElementById('updateProjectModal');
+    if (event.target === updateModal) {
+      closeUpdateProjectModal();
+    }
+    
+    const taskModal = document.getElementById('taskModal');
+    if (event.target === taskModal) {
+      closeTaskModal();
+    }
+    
+    const eventModal = document.getElementById('eventModal');
+    if (event.target === eventModal) {
+      closeEventModal();
+    }
+    
+    const updateTaskModal = document.getElementById('updateTaskModal');
+    if (event.target === updateTaskModal) {
+      closeUpdateTaskModal();
+    }
+  });
+
+  // Load initial data for the active page
+  const currentTime = new Date().getTime();
   loadProjects();
-  loadTasks();
-  loadEvents();
+  tabState.projects.lastLoaded = currentTime;
+  tabState.projects.hasChanges = false;
 });
 </script> 
